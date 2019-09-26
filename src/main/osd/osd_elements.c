@@ -471,7 +471,7 @@ static void osdElementAltitude(osdElementParms_t *element)
 #ifdef USE_ACC
 static void osdElementAngleRollPitch(osdElementParms_t *element)
 {
-    const int angle = (element->item == OSD_PITCH_ANGLE) ? attitude.values.pitch : attitude.values.roll;
+    const int angle = (element->item == OSD_PITCH_ANGLE) ? attitude.values.yaw : attitude.values.roll;
     tfp_sprintf(element->buff, "%c%02d.%01d", angle < 0 ? '-' : ' ', abs(angle / 10), abs(angle % 10));
 }
 #endif
