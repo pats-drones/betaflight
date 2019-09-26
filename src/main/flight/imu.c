@@ -333,9 +333,14 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
        attitude.values.pitch = lrintf(((0.5f * M_PIf) - acos_approx(+2.0f * (buffer.wy - buffer.xz))) * (1800.0f / M_PIf));
        attitude.values.yaw = lrintf((-atan2_approx((+2.0f * (buffer.wz + buffer.xy)), (+1.0f - 2.0f * (buffer.yy + buffer.zz))) * (1800.0f / M_PIf)));
     } else {
-       attitude.values.roll = lrintf(atan2_approx(rMat[2][1], rMat[2][2]) * (1800.0f / M_PIf));
-       attitude.values.pitch = lrintf(((0.5f * M_PIf) - acos_approx(-rMat[2][0])) * (1800.0f / M_PIf));
-       attitude.values.yaw = lrintf((-atan2_approx(rMat[1][0], rMat[0][0]) * (1800.0f / M_PIf)));
+       // quaternion rotation angle
+float rotation_angle = 2.0f*acos_approx(q.w)*(1800.0f / M_PIf);
+// norm of the rotational rates
+float rate_norm = invSqrt(sq(q.x)+sq(q.y)+sq(q.z));
+// angle commands
+attitude.values.roll = lrintf(q.x*rate_norm*rotation_angle);
+attitude.values.pitch = lrintf(q.y*rate_norm*rotation_angle);
+attitude.values.yaw = 0;
     }
 
     if (attitude.values.yaw < 0)
