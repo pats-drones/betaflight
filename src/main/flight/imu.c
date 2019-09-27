@@ -333,14 +333,35 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
        attitude.values.pitch = lrintf(((0.5f * M_PIf) - acos_approx(+2.0f * (buffer.wy - buffer.xz))) * (1800.0f / M_PIf));
        attitude.values.yaw = lrintf((-atan2_approx((+2.0f * (buffer.wz + buffer.xy)), (+1.0f - 2.0f * (buffer.yy + buffer.zz))) * (1800.0f / M_PIf)));
     } else {
-       // quaternion rotation angle
-float rotation_angle = 2.0f*acos_approx(q.w)*(1800.0f / M_PIf);
-// norm of the rotational rates
-float rate_norm = invSqrt(sq(q.x)+sq(q.y)+sq(q.z));
-// angle commands
-attitude.values.roll = lrintf(q.x*rate_norm*rotation_angle);
-attitude.values.pitch = lrintf(q.y*rate_norm*rotation_angle);
-attitude.values.yaw = 0;
+
+	float norm_q1_WZ = invSqrt(sq(q.w)+sq(q.z));
+
+	quaternion q2;
+	q2.w = q.w*norm_q1_WZ;
+	q2.x = 0.0f;
+	q2.y = 0.0f;
+	q2.z = q.z*norm_q1_WZ;	
+
+	quaternion qd;
+	qd.w = + q.w*q2.w + q.z*q2.z;
+	qd.x = - q.x*q2.w - q.y*q2.z;
+	qd.y = - q.y*q2.w + q.x*q2.z;
+	qd.z = + q.w*q2.z - q.z*q2.w;
+
+	// quaternion rotation angle
+	float rotation_angle = 2.0f*acos_approx(qd.w)*(1800.0f / M_PIf);
+	float heading_angle = 2.0f*acos_approx(q2.w)*(1800.0f / M_PIf);
+
+	if (q2.z<0.0f)
+		heading_angle = -heading_angle;
+
+	// norm of the rotational rates
+	float rate_norm = invSqrt(sq(qd.x)+sq(qd.y)+sq(qd.z));
+	// angle commands
+	attitude.values.roll = lrintf(-qd.x*rate_norm*rotation_angle);
+	attitude.values.pitch = lrintf(-qd.y*rate_norm*rotation_angle);
+	attitude.values.yaw = lrintf(-heading_angle );
+
     }
 
     if (attitude.values.yaw < 0)
