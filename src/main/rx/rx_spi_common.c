@@ -89,7 +89,7 @@ void rxSpiLedBlink(timeMs_t blinkMs)
     }
     ledBlinkMs = millis();
 
-    rxSpiLedToggle();
+    rxSpiLedOff();
 }
 
 void rxSpiLedBlinkRxLoss(rx_spi_received_e result)
