@@ -82,6 +82,7 @@ static FAST_RAM_ZERO_INIT uint16_t itermAcceleratorGain;
 static FAST_RAM float antiGravityOsdCutoff = 1.0f;
 static FAST_RAM_ZERO_INIT bool antiGravityEnabled;
 static FAST_RAM_ZERO_INIT bool zeroThrottleItermReset;
+static FAST_RAM_ZERO_INIT float yaw_angle;
 
 PG_REGISTER_WITH_RESET_TEMPLATE(pidConfig_t, pidConfig, PG_PID_CONFIG, 2);
 
@@ -523,6 +524,7 @@ void pidResetIterm(void)
         axisError[axis] = 0.0f;
 #endif
     }
+    yaw_angle = -attitude.values.yaw / 10.0f;
 }
 
 #ifdef USE_ACRO_TRAINER
@@ -826,6 +828,30 @@ STATIC_UNIT_TESTED float pidLevel(int axis, const pidProfile_t *pidProfile, cons
         const float horizonLevelStrength = calcHorizonLevelStrength();
         currentPidSetpoint = currentPidSetpoint + (errorAngle * horizonGain * horizonLevelStrength);
     }
+    return currentPidSetpoint;
+}
+
+STATIC_UNIT_TESTED float pidLevelYaw(int axis, float currentPidSetpoint) {
+    // calculate error angle and limit the angle to the max inclination
+    // rcDeflection is in range [-1.0, 1.0]
+    yaw_angle +=getRcDeflection(axis);
+    
+    if (yaw_angle < -180)
+        yaw_angle += 360;
+    else if (yaw_angle > 180)
+        yaw_angle -= 360;
+    
+    float errorAngle = yaw_angle - (-attitude.raw[axis] / 10.0f);
+    //FIXME: this can still create overflows:
+    if (errorAngle < -180)
+        errorAngle += 360;
+    else if (errorAngle > 180)
+        errorAngle -= 360;
+
+    if (FLIGHT_MODE(ANGLE_MODE) ) {
+        // ANGLE mode - control is angle based
+        currentPidSetpoint = errorAngle * levelGain;
+    } 
     return currentPidSetpoint;
 }
 
@@ -1300,8 +1326,11 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         }
         // Yaw control is GYRO based, direct sticks control is applied to rate PID
 #if defined(USE_ACC)
-        if (levelModeActive && (axis != FD_YAW)) {
-            currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint);
+        if (levelModeActive ) {
+            if (axis == FD_YAW)
+                   currentPidSetpoint = pidLevelYaw(axis, currentPidSetpoint);
+                else
+                    currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint);
         }
 #endif
 
