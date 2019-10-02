@@ -342,7 +342,7 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
 	q2.y = 0.0f;
 	q2.z = q.z*norm_q1_WZ;	
 
-	quaternion qd;
+	quaternion qd; //quat with only roll and pitch, t.o.v. hover
 	qd.w = + q.w*q2.w + q.z*q2.z;
 	qd.x = - q.x*q2.w - q.y*q2.z;
 	qd.y = - q.y*q2.w + q.x*q2.z;
@@ -363,9 +363,6 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
 	attitude.values.yaw = lrintf(-heading_angle );
 
     }
-
-    if (attitude.values.yaw < 0)
-        attitude.values.yaw += 3600;
 
     // Update small angle state
     if (rMat[2][2] > smallAngleCosZ) {
