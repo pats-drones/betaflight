@@ -81,7 +81,7 @@ static FAST_RAM_ZERO_INIT float antiGravityThrottleHpf;
 static FAST_RAM_ZERO_INIT uint16_t itermAcceleratorGain;
 static FAST_RAM float antiGravityOsdCutoff = 1.0f;
 static FAST_RAM_ZERO_INIT bool antiGravityEnabled;
-static FAST_RAM_ZERO_INIT bool zeroThrottleItermReset;
+static FAST_RAM_ZERO_INIT uint16_t zeroThrottleItermReset;
 static FAST_RAM_ZERO_INIT float yaw_angle;
 
 PG_REGISTER_WITH_RESET_TEMPLATE(pidConfig_t, pidConfig, PG_PID_CONFIG, 2);
@@ -1519,6 +1519,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         }
     } else if (zeroThrottleItermReset) {
         pidResetIterm();
+        zeroThrottleItermReset--;
     }
 }
 
@@ -1575,6 +1576,9 @@ void dynLpfDTermUpdate(float throttle)
 void pidSetItermReset(bool enabled)
 {
     zeroThrottleItermReset = enabled;
+    if (enabled) {
+        zeroThrottleItermReset = pidFrequency/2;;
+    }
 }
 
 float pidGetPreviousSetpoint(int axis)
