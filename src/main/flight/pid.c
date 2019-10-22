@@ -1578,7 +1578,6 @@ void dynLpfDTermUpdate(float throttle)
 
 void pidSetItermReset(bool enabled)
 {
-    zeroThrottleItermReset = enabled;
     if (enabled) {
         zeroThrottleItermReset = pidFrequency/2;;
     }
