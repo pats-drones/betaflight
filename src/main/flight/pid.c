@@ -818,7 +818,7 @@ STATIC_UNIT_TESTED float pidLevel(int axis, const pidProfile_t *pidProfile, cons
     angle += gpsRescueAngle[axis] / 100; // ANGLE IS IN CENTIDEGREES
 #endif
     angle = constrainf(angle, -pidProfile->levelAngleLimit, pidProfile->levelAngleLimit);
-    const float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
+    const float errorAngle =  - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
     if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(GPS_RESCUE_MODE)) {
         // ANGLE mode - control is angle based
         currentPidSetpoint = errorAngle * levelGain;
@@ -834,7 +834,7 @@ STATIC_UNIT_TESTED float pidLevel(int axis, const pidProfile_t *pidProfile, cons
 STATIC_UNIT_TESTED float pidLevelYaw(int axis, float currentPidSetpoint) {
     // calculate error angle and limit the angle to the max inclination
     // rcDeflection is in range [-1.0, 1.0]
-    yaw_angle +=getRcDeflection(axis);
+    //yaw_angle +=getRcDeflection(axis); // TODO: temporarily disabled
     
     if (yaw_angle < -180)
         yaw_angle += 360;
@@ -850,7 +850,7 @@ STATIC_UNIT_TESTED float pidLevelYaw(int axis, float currentPidSetpoint) {
 
     if (FLIGHT_MODE(ANGLE_MODE) ) {
         // ANGLE mode - control is angle based
-        currentPidSetpoint = errorAngle * levelGain;
+        currentPidSetpoint = errorAngle * levelGain * 0.0f; // TODO: temporarily disabled
     } 
     return currentPidSetpoint;
 }
@@ -1327,9 +1327,9 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         // Yaw control is GYRO based, direct sticks control is applied to rate PID
 #if defined(USE_ACC)
         if (levelModeActive ) {
-            if (axis == FD_YAW)
-                   currentPidSetpoint = pidLevelYaw(axis, currentPidSetpoint);
-                else
+            if (axis != FD_YAW) //TODO: yaw angle feedback control currently disabled, only stabilisation
+            //       currentPidSetpoint = pidLevelYaw(axis, currentPidSetpoint);
+            //    else
                     currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint);
         }
 #endif
@@ -1584,4 +1584,9 @@ void pidSetItermReset(bool enabled)
 float pidGetPreviousSetpoint(int axis)
 {
     return previousPidSetpoint[axis];
+}
+
+float getYawAngle(void)
+{
+    return yaw_angle;
 }

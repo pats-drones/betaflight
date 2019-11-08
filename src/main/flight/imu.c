@@ -37,6 +37,7 @@
 #include "drivers/time.h"
 
 #include "fc/runtime_config.h"
+#include "fc/rc.h"
 
 #include "flight/gps_rescue.h"
 #include "flight/imu.h"
@@ -336,30 +337,84 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
 
 	float norm_q1_WZ = invSqrt(sq(q.w)+sq(q.z));
 
-	quaternion q2;
+	quaternion q2; // extract heading from q1
 	q2.w = q.w*norm_q1_WZ;
 	q2.x = 0.0f;
 	q2.y = 0.0f;
-	q2.z = q.z*norm_q1_WZ;	
+	q2.z = q.z*norm_q1_WZ;		
 
-	quaternion qd; //quat with only roll and pitch, t.o.v. hover
+	float heading_angle = 2.0f*acos_approx(q2.w)*(1800.0f / M_PIf);
+	if (q2.z<0.0f)
+		heading_angle = -heading_angle;
+
+	float heading_error = heading_angle - (getYawAngle()*10.0f);
+	if (heading_error < -1800.0f)
+		heading_error += 3600.0f;
+	else if (heading_error > 1800.0f)
+		heading_error -= 3600.0f;
+
+	quaternion qd; // de-rotated - quat with only roll and pitch, t.o.v. hover
 	qd.w = + q.w*q2.w + q.z*q2.z;
 	qd.x = - q.x*q2.w - q.y*q2.z;
 	qd.y = - q.y*q2.w + q.x*q2.z;
 	qd.z = + q.w*q2.z - q.z*q2.w;
 
+	float rollDeflection = -getRcDeflection(FD_ROLL);
+	float pitchDeflection = -getRcDeflection(FD_PITCH);
+
+	// rotate desired deflections to compensate for the current heading error of the drone
+	float refQuaternionX = + rollDeflection*cos_approx((heading_error)*(M_PIf / 1800.0f)) + pitchDeflection*sin_approx((heading_error)*(M_PIf / 1800.0f));
+	float refQuaternionY = - rollDeflection*sin_approx((heading_error)*(M_PIf / 1800.0f)) + pitchDeflection*cos_approx((heading_error)*(M_PIf / 1800.0f));
+
+
+	quaternion qr; // reference
+	qr.x = refQuaternionX;
+	qr.y = refQuaternionY;
+	qr.z = 0;
+	qr.w = sqrt(1-sq(qr.x)-sq(qr.y));
+
+	quaternion qe; // error
+	qe.w = qr.w*qd.w + qr.x*qd.x + qr.y*qd.y;
+	qe.x = -qr.w*qd.x + qr.x*qd.w;
+	qe.y = -qr.w*qd.y + qr.y*qd.w;
+	qe.z = -qr.x*qd.y + qr.y*qd.x;
+
+	if (qe.w < 0) {
+	    qe.w = -qe.w;
+	    qe.x = -qe.x;
+	    qe.y = -qe.y;
+	    qe.z = -qe.z;
+	}
+
+	float norm_qe_WZ = invSqrt(sq(qe.w)+sq(qe.z));
+
+	// extract heading from qe
+	q2.w = qe.w*norm_qe_WZ;
+	q2.x = 0.0f;
+	q2.y = 0.0f;
+	q2.z = qe.z*norm_qe_WZ;	
+
+	// de-rotated - quat with only roll and pitch, t.o.v. hover
+	qd.w = + qe.w*q2.w + qe.z*q2.z;
+	qd.x = - qe.x*q2.w - qe.y*q2.z;
+	qd.y = - qe.y*q2.w + qe.x*q2.z;
+	qd.z = + qe.w*q2.z - qe.z*q2.w;
+
 	// quaternion rotation angle
 	float rotation_angle = 2.0f*acos_approx(qd.w)*(1800.0f / M_PIf);
-	float heading_angle = 2.0f*acos_approx(q2.w)*(1800.0f / M_PIf);
-
-	if (q2.z<0.0f)
-		heading_angle = -heading_angle;
 
 	// norm of the rotational rates
 	float rate_norm = invSqrt(sq(qd.x)+sq(qd.y)+sq(qd.z));
 	// angle commands
-	attitude.values.roll = lrintf(-qd.x*rate_norm*rotation_angle);
-	attitude.values.pitch = lrintf(-qd.y*rate_norm*rotation_angle);
+	
+	float rotateX = -qd.x*rate_norm*rotation_angle;
+	float rotateY = -qd.y*rate_norm*rotation_angle;
+
+	float rollCommand = rotateX;
+	float pitchCommand = rotateY;
+
+	attitude.values.roll = lrintf(rollCommand);
+	attitude.values.pitch = lrintf(pitchCommand);
 	attitude.values.yaw = lrintf(-heading_angle );
 
     }
