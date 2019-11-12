@@ -407,11 +407,8 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
 	float rate_norm = invSqrt(sq(qd.x)+sq(qd.y)+sq(qd.z));
 	// angle commands
 	
-	float rotateX = -qd.x*rate_norm*rotation_angle;
-	float rotateY = -qd.y*rate_norm*rotation_angle;
-
-	float rollCommand = rotateX;
-	float pitchCommand = rotateY;
+	float rollCommand = -qd.x*rate_norm*rotation_angle;
+	float pitchCommand = -qd.y*rate_norm*rotation_angle;
 
 	attitude.values.roll = lrintf(rollCommand);
 	attitude.values.pitch = lrintf(pitchCommand);
