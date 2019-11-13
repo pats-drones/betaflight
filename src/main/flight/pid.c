@@ -47,6 +47,8 @@
 #include "flight/imu.h"
 #include "flight/mixer.h"
 
+#include "rx/rx.h"
+
 #include "io/gps.h"
 
 #include "pg/pg.h"
@@ -818,7 +820,7 @@ STATIC_UNIT_TESTED float pidLevel(int axis, const pidProfile_t *pidProfile, cons
     angle += gpsRescueAngle[axis] / 100; // ANGLE IS IN CENTIDEGREES
 #endif
     angle = constrainf(angle, -pidProfile->levelAngleLimit, pidProfile->levelAngleLimit);
-    const float errorAngle =  - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
+    const float errorAngle = -((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
     if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(GPS_RESCUE_MODE)) {
         // ANGLE mode - control is angle based
         currentPidSetpoint = errorAngle * levelGain;
@@ -834,7 +836,7 @@ STATIC_UNIT_TESTED float pidLevel(int axis, const pidProfile_t *pidProfile, cons
 STATIC_UNIT_TESTED float pidLevelYaw(int axis, float currentPidSetpoint) {
     // calculate error angle and limit the angle to the max inclination
     // rcDeflection is in range [-1.0, 1.0]
-    yaw_angle +=getRcDeflection(axis); // TODO: temporarily disabled
+    yaw_angle +=getRcDeflection(axis);
     
     if (yaw_angle < -180)
         yaw_angle += 360;
@@ -850,7 +852,7 @@ STATIC_UNIT_TESTED float pidLevelYaw(int axis, float currentPidSetpoint) {
 
     if (FLIGHT_MODE(ANGLE_MODE) ) {
         // ANGLE mode - control is angle based
-        currentPidSetpoint = errorAngle * levelGain; // TODO: temporarily disabled
+        currentPidSetpoint = errorAngle * levelGain;
     } 
     return currentPidSetpoint;
 }
@@ -1328,8 +1330,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
 #if defined(USE_ACC)
     if (levelModeActive ) {
         if (axis == FD_YAW) {
-            bool yawControlSwitchKevin = true;
-			if (yawControlSwitchKevin)
+            if (rcData[AUX2] > 1020 && rcData[AUX2] < 1050) // using a small alteration on the mode switch turn on/off headless mode
         		currentPidSetpoint = pidLevelYaw(axis, currentPidSetpoint);
 		}
 		else
