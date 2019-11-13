@@ -92,6 +92,7 @@ float accAverage[XYZ_AXIS_COUNT];
 uint32_t accTimeSum = 0;        // keep track for integration of acc
 int accSumCount = 0;
 bool canUseGPSHeading = true;
+float rotationAngle = 0;
 
 static float throttleAngleScale;
 static int throttleAngleValue;
@@ -401,14 +402,14 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
 	qd.z = + qe.w*q2.z - qe.z*q2.w;
 
 	// quaternion rotation angle
-	float rotation_angle = 2.0f*acos_approx(qd.w)*(1800.0f / M_PIf);
+	rotationAngle = 2.0f*acos_approx(qd.w)*(1800.0f / M_PIf);
 
 	// norm of the rotational rates
 	float rate_norm = invSqrt(sq(qd.x)+sq(qd.y)+sq(qd.z));
 	// angle commands
 	
-	float rollCommand = -qd.x*rate_norm*rotation_angle;
-	float pitchCommand = -qd.y*rate_norm*rotation_angle;
+	float rollCommand = -qd.x*rate_norm*rotationAngle;
+	float pitchCommand = -qd.y*rate_norm*rotationAngle;
 
 	attitude.values.roll = lrintf(rollCommand);
 	attitude.values.pitch = lrintf(pitchCommand);
