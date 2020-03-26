@@ -43,6 +43,8 @@
 
 #include "sensors/battery.h"
 
+// #include "hw_config.h"
+
 /**
  * terminology: meter vs sensors
  *
@@ -157,7 +159,6 @@ static void updateBatteryBeeperAlert(void)
             break;
         case BATTERY_CRITICAL:
             beeper(BEEPER_BAT_CRIT_LOW);
-
             break;
         case BATTERY_OK:
         case BATTERY_NOT_PRESENT:
@@ -244,6 +245,7 @@ static void batteryUpdateVoltageState(void)
             break;
 
         case BATTERY_CRITICAL:
+            comatize();
             if (voltageMeter.filtered > batteryCriticalVoltage) {
                 voltageState = BATTERY_WARNING;
             }
@@ -254,6 +256,8 @@ static void batteryUpdateVoltageState(void)
     }
 
 }
+
+
 
 static void batteryUpdateLVC(timeUs_t currentTimeUs)
 {
@@ -323,6 +327,42 @@ const char * const batteryStateStrings[] = {"OK", "WARNING", "CRITICAL", "NOT PR
 const char * getBatteryStateString(void)
 {
     return batteryStateStrings[getBatteryState()];
+}
+
+#include "drivers/light_led.h"
+#include "io/ledstrip.h"
+#include "drivers/motor.h"
+void comatize(void)
+{ 
+    ledStripDisable();
+    LED0_OFF;
+    LED1_OFF;
+    LED2_OFF;
+    motorDisable();
+    
+
+    // Clear PDDS and LPDS bits
+    PWR->CR &= PWR_CR_LPDS | PWR_CR_PDDS | PWR_CR_CWUF;
+
+    // Set PDDS and LPDS bits for standby mode, and set Clear WUF flag (required per datasheet):
+    PWR->CR |= PWR_CR_CWUF;
+    // Enable wakeup pin bit.
+    PWR->CR |=  PWR_CSR_EWUP;
+  
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+
+    // System Control Register Bits. See...
+    // http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0497a/Cihhjgdh.html
+    // Set Power down deepsleep bit.
+    PWR->CR |= PWR_CR_PDDS;
+    // Unset Low-power deepsleep.
+    PWR->CR &= ~PWR_CR_LPDS;
+  
+    // Now go into stop mode, wake up on interrupt
+    asm("    wfi");
+
+    // Clear SLEEPDEEP bit so we can use SLEEP mode
+    SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
 }
 
 void batteryInit(void)
