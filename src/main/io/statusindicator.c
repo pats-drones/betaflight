@@ -26,6 +26,12 @@
 #include "drivers/light_led.h"
 #include "drivers/time.h"
 
+#include "io/ledstrip.h"
+#include "drivers/pwm_output.h"
+#include "flight/mixer.h"
+#include "fc/rc_modes.h"
+#include "rx/rx.h"
+
 #include "statusindicator.h"
 
 static uint32_t warningLedTimer = 0;
@@ -67,9 +73,20 @@ void warningLedRefresh(void)
         case WARNING_LED_ON:
             LED0_ON;
             break;
-        case WARNING_LED_FLASH:
+        case WARNING_LED_FLASH :{
+            static bool led_strip_toggle = false;
+            led_strip_toggle = !led_strip_toggle;
+#ifdef USE_LED_STRIP
+            if (rxIsReceivingSignal()){
+                if (led_strip_toggle)
+                    ledStripEnable();
+                else
+                    ledStripDisable();
+            }
+#endif
             LED0_TOGGLE;
             break;
+        }
     }
 
     uint32_t now = micros();
@@ -79,6 +96,12 @@ void warningLedRefresh(void)
 void warningLedUpdate(void)
 {
     uint32_t now = micros();
+#ifdef USE_DSHOT
+    //https://github.com/pats-drones/pats/issues/222
+    if (warningLedState == WARNING_LED_FLASH && rxIsReceivingSignal()) {
+        pwmWriteDshotCommand(ALL_MOTORS, getMotorCount(), 1, false);
+    }
+#endif
 
     if ((int32_t)(now - warningLedTimer) < 0) {
         return;
