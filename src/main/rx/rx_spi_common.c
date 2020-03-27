@@ -61,23 +61,32 @@ void rxSpiCommonIOInit(const rxSpiConfig_t *rxSpiConfig)
 
 void rxSpiLedOn(void)
 {
+    /*
     if (ledPin) {
         ledInversion ? IOLo(ledPin) : IOHi(ledPin);
     }
+    */
+    IOLo(ledPin);
 }
 
 void rxSpiLedOff(void)
 {
+    /*
     if (ledPin) {
         ledInversion ? IOHi(ledPin) : IOLo(ledPin);
     }
+    */
+    IOLo(ledPin);
 }
 
 void rxSpiLedToggle(void)
 {
+    /*
     if (ledPin) {
         IOToggle(ledPin);
     }
+    */
+    IOLo(ledPin);
 }
 
 void rxSpiLedBlink(timeMs_t blinkMs)
@@ -89,7 +98,7 @@ void rxSpiLedBlink(timeMs_t blinkMs)
     }
     ledBlinkMs = millis();
 
-    rxSpiLedToggle();
+    rxSpiLedOff();
 }
 
 void rxSpiLedBlinkRxLoss(rx_spi_received_e result)
