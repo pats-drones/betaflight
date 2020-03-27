@@ -262,6 +262,7 @@ void applyAbsoluteControl(const int axis, const float gyroRate, float *currentPi
 void rotateItermAndAxisError();
 float pidLevel(int axis, const pidProfile_t *pidProfile,
     const rollAndPitchTrims_t *angleTrim, float currentPidSetpoint);
+float pidLevelYaw(int axis, float currentPidSetpoint);
 float calcHorizonLevelStrength(void);
 #endif
 void dynLpfDTermUpdate(float throttle);
@@ -272,4 +273,5 @@ float pidGetPidFrequency();
 float pidGetFfBoostFactor();
 float pidGetFfSmoothFactor();
 float pidGetSpikeLimitInverse();
+float getYawAngle(void);
 float dynDtermLpfCutoffFreq(float throttle, uint16_t dynLpfMin, uint16_t dynLpfMax, uint8_t expo);

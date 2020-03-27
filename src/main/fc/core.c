@@ -723,10 +723,27 @@ int8_t calculateThrottlePercent(void)
     return ret;
 }
 
+uint8_t limitThrottleFlips(uint8_t throttlePercent)
+{
+    float angleTresholdLow = 90;
+    float angleTresholdHigh= 180;
+
+    if (rotationAngle/10.0f > angleTresholdHigh)
+        throttlePercent = 0;
+    else if (rotationAngle/10.0f > angleTresholdLow)
+        throttlePercent = (angleTresholdHigh-(rotationAngle/10.0f))/(angleTresholdHigh-angleTresholdLow)*throttlePercent;
+
+    return throttlePercent;
+
+    
+}
+
 uint8_t calculateThrottlePercentAbs(void)
 {
-    return ABS(calculateThrottlePercent());
+    return limitThrottleFlips(ABS(calculateThrottlePercent()));
 }
+
+
 
 static bool airmodeIsActivated;
 
