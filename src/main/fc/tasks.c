@@ -173,6 +173,23 @@ static void taskUpdateRxMain(timeUs_t currentTimeUs)
         sendRcDataToHid();
     }
 #endif
+
+    // updateRcCommands sets rcCommand, which is needed by updateAltHoldState and updateSonarAltHoldState
+    updateRcCommands();
+    updateArmingStatus();
+
+        //direct motor control from pats basestation
+    static bool motors_disarm_needs_reset = false;
+    if (!ARMING_FLAG(ARMED) && rcData[AUX2] > 1105 && rcData[AUX2] < 1130) {
+            motors_disarm_needs_reset = true;
+            motor_disarmed[0] = (rcData[ROLL] -1000)*2;
+            motor_disarmed[1] = (rcData[PITCH] -1000)*2;
+            motor_disarmed[2] = (rcData[THROTTLE] -1000)*2;
+            motor_disarmed[3] = (rcData[YAW] -1000)*2;
+    }  else if (motors_disarm_needs_reset) {
+        motors_disarm_needs_reset = false;
+        mixerResetDisarmedMotors();
+    }
 }
 
 #ifdef USE_BARO

@@ -34,7 +34,7 @@
 #define USBD_PRODUCT_STRING     "MATEKF411RX"
 #endif
 
-#define LED0_PIN                PC13
+#define LED0_PIN                NONE
 
 #define USE_BEEPER
 #define BEEPER_PIN              PC15
