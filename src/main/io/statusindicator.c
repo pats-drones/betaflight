@@ -30,6 +30,7 @@
 #include "drivers/pwm_output.h"
 #include "flight/mixer.h"
 #include "fc/rc_modes.h"
+#include "fc/runtime_config.h"
 #include "rx/rx.h"
 
 #include "statusindicator.h"
@@ -77,7 +78,7 @@ void warningLedRefresh(void)
             static bool led_strip_toggle = false;
             led_strip_toggle = !led_strip_toggle;
 #ifdef USE_LED_STRIP
-            if (rxIsReceivingSignal()){
+            if (rxIsReceivingSignal() && ((getArmingDisableFlags() & ARMING_DISABLED_ARM_SWITCH)) ){
                 if (led_strip_toggle)
                     ledStripEnable();
                 else
@@ -98,7 +99,7 @@ void warningLedUpdate(void)
     uint32_t now = micros();
 #ifdef USE_DSHOT
     //https://github.com/pats-drones/pats/issues/222
-    if (warningLedState == WARNING_LED_FLASH && rxIsReceivingSignal()) {
+    if (warningLedState == WARNING_LED_FLASH && rxIsReceivingSignal() && ((getArmingDisableFlags() & ARMING_DISABLED_ARM_SWITCH))) {
         pwmWriteDshotCommand(ALL_MOTORS, getMotorCount(), 1, false);
     }
 #endif
