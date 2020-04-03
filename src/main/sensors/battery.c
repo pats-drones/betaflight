@@ -331,14 +331,14 @@ const char * getBatteryStateString(void)
 
 #include "drivers/light_led.h"
 #include "io/ledstrip.h"
-#include "drivers/motor.h"
+#include "drivers/pwm_output.h"
 void comatize(void)
 { 
     ledStripDisable();
     LED0_OFF;
     LED1_OFF;
     LED2_OFF;
-    motorDisable();
+    pwmDisableMotors();
     
 
     // Clear PDDS and LPDS bits
