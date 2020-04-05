@@ -88,7 +88,7 @@ static long cmsx_Ledstrip_OnExit(const OSD_Entry *self)
         featureEnable(FEATURE_LED_STRIP);
         ledStripEnable();
     } else {
-        ledStripDisable();
+        ledStripDisable(false);
         featureDisable(FEATURE_LED_STRIP);
     }
 

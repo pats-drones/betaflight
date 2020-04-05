@@ -82,7 +82,7 @@ void warningLedRefresh(void)
                 if (led_strip_toggle)
                     ledStripEnable();
                 else
-                    ledStripDisable();
+                    ledStripDisable(false);
             }
 #endif
             LED0_TOGGLE;

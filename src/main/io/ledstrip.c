@@ -1148,15 +1148,21 @@ bool setModeColor(ledModeIndex_e modeIndex, int modeColorIndex, int colorIndex)
 }
 #endif
 
+bool disable_permanent = false;
 void ledStripEnable(void)
 {
-    ws2811LedStripEnable();
+    if (!disable_permanent) {
+        ws2811LedStripEnable();
 
-    ledStripEnabled = true;
+        ledStripEnabled = true;
+    }
 }
 
-void ledStripDisable(void)
+
+void ledStripDisable(bool permanent)
 {
+    if (permanent)
+        disable_permanent = true;
     ledStripEnabled = false;
     previousProfileColorIndex = COLOR_UNDEFINED;
 
@@ -1252,7 +1258,7 @@ void ledStripUpdate(timeUs_t currentTimeUs)
     }
 
     if (ledStripEnabled && IS_RC_MODE_ACTIVE(BOXLEDLOW)) {
-        ledStripDisable();
+        ledStripDisable(false);
     } else if (!IS_RC_MODE_ACTIVE(BOXLEDLOW)) {
         ledStripEnable();
     }
