@@ -165,6 +165,7 @@ static void updateBatteryBeeperAlert(void)
         case BATTERY_CRITICAL:
             beeper(BEEPER_BAT_CRIT_LOW);
             break;
+        case BATTERY_NOT_CHARGING:
         case BATTERY_OK:
         case BATTERY_NOT_PRESENT:
         case BATTERY_INIT:
@@ -230,17 +231,36 @@ void batteryUpdatePresence(void)
         debug[3] = isVoltageStable();
     }
 }
-
-static void batteryUpdateVoltageState(void)
+uint16_t prev_charge_voltage = 0;
+timeUs_t prev_charging_check_update = 0;
+static void batteryUpdateVoltageState(timeUs_t currentTimeUs)
 {
     // alerts are currently used by beeper, osd and other subsystems
     switch (voltageState) {
         case BATTERY_OK:
-            if (voltageMeter.filtered <= (batteryWarningVoltage - batteryConfig()->vbathysteresis)) {
-                voltageState = BATTERY_WARNING;
+            if (ARMING_FLAG(ARMED)) {
+                prev_charging_check_update = currentTimeUs;
+                if (voltageMeter.filtered <= (batteryWarningVoltage - batteryConfig()->vbathysteresis)) {
+                    voltageState = BATTERY_WARNING;
+                }
+           } else {
+                if (currentTimeUs - prev_charging_check_update > 10e6) {
+                    prev_charging_check_update = currentTimeUs;
+                    if (getBatteryAverageCellVoltage() < batteryConfig()->vbatfullcellvoltage-20) {
+                        voltageState = BATTERY_NOT_CHARGING;
+                    }
+                }
+           }
+            break;
+        case BATTERY_NOT_CHARGING:
+            if (ARMING_FLAG(ARMED) || getBatteryAverageCellVoltage() > batteryConfig()->vbatfullcellvoltage-20) {
+                voltageState = BATTERY_OK;
+            }  else if (currentTimeUs - prev_charging_check_update > 10e6) {
+                prev_charging_check_update = currentTimeUs;
+                if (voltageMeter.filtered > prev_charge_voltage  + batteryConfig()->vbathysteresis)
+                    voltageState = BATTERY_OK;
             }
             break;
-
         case BATTERY_WARNING:
             if (voltageMeter.filtered <= (batteryCriticalVoltage - batteryConfig()->vbathysteresis)) {
                 voltageState = BATTERY_CRITICAL;
@@ -259,7 +279,10 @@ static void batteryUpdateVoltageState(void)
         default:
             break;
     }
-
+    
+    if (currentTimeUs == prev_charging_check_update) {
+        prev_charge_voltage = voltageMeter.filtered;
+    }
 }
 
 
@@ -301,7 +324,7 @@ static void batteryUpdateConsumptionState(void)
 
 void batteryUpdateStates(timeUs_t currentTimeUs)
 {
-    batteryUpdateVoltageState();
+    batteryUpdateVoltageState(currentTimeUs);
     batteryUpdateConsumptionState();
     batteryUpdateLVC(currentTimeUs);
     batteryState = MAX(voltageState, consumptionState);

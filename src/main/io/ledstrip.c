@@ -550,6 +550,7 @@ typedef enum {
     WARNING_LOW_BATTERY,
     WARNING_FAILSAFE,
     WARNING_CRASH_FLIP_ACTIVE,
+    WARNING_NOT_CHARGING,
 } warningFlags_e;
 
 static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
@@ -564,8 +565,11 @@ static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
 
         if (warningFlashCounter == 0) {      // update when old flags was processed
             warningFlags = 0;
-            if (batteryConfig()->voltageMeterSource != VOLTAGE_METER_NONE && getBatteryState() != BATTERY_OK) {
+            if (batteryConfig()->voltageMeterSource != VOLTAGE_METER_NONE && getBatteryState() != BATTERY_OK && getBatteryState() != BATTERY_NOT_CHARGING) {
                 warningFlags |= 1 << WARNING_LOW_BATTERY;
+            }
+            if (batteryConfig()->voltageMeterSource != VOLTAGE_METER_NONE && getBatteryState() == BATTERY_NOT_CHARGING) {
+                warningFlags |= 1 << WARNING_CRASH_FLIP_ACTIVE;
             }
             if (failsafeIsActive()) {
                 warningFlags |= 1 << WARNING_FAILSAFE;
@@ -592,6 +596,9 @@ static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
                     break;
                 case WARNING_CRASH_FLIP_ACTIVE:
                     warningColor = colorOn ? &HSV(MAGENTA) : &HSV(BLACK);
+                    break;
+                case WARNING_NOT_CHARGING:
+                    warningColor = colorOn ? &HSV(WHITE) : &HSV(BLACK);
                     break;
                 case WARNING_LOW_BATTERY:
                     warningColor = colorOn ? &HSV(RED) : &HSV(BLACK);
