@@ -43,6 +43,11 @@
 
 #include "sensors/battery.h"
 
+
+#include "drivers/light_led.h"
+#include "io/ledstrip.h"
+#include "drivers/pwm_output.h"
+
 // #include "hw_config.h"
 
 /**
@@ -329,41 +334,39 @@ const char * getBatteryStateString(void)
     return batteryStateStrings[getBatteryState()];
 }
 
-#include "drivers/light_led.h"
-#include "io/ledstrip.h"
-#include "drivers/pwm_output.h"
 void comatize(void)
 { 
-    static int sleep_delay_cnt = 0;
+    if (!ARMING_FLAG(ARMED)) {
+        static int sleep_delay_cnt = 0;
+        ledStripDisable(true);
+        LED0_OFF;
+        LED1_OFF;
+        LED2_OFF;
+        pwmDisableMotors();
+        if (sleep_delay_cnt++ > 5) {
+            // Clear PDDS and LPDS bits
+            PWR->CR &= PWR_CR_LPDS | PWR_CR_PDDS | PWR_CR_CWUF;
 
-    ledStripDisable(true);
-    LED0_OFF;
-    LED1_OFF;
-    LED2_OFF;
-    pwmDisableMotors();
-    if (sleep_delay_cnt++ > 5) {
-        // Clear PDDS and LPDS bits
-        PWR->CR &= PWR_CR_LPDS | PWR_CR_PDDS | PWR_CR_CWUF;
+            // Set PDDS and LPDS bits for standby mode, and set Clear WUF flag (required per datasheet):
+            PWR->CR |= PWR_CR_CWUF;
+            // Enable wakeup pin bit.
+            PWR->CR |=  PWR_CSR_EWUP;
 
-        // Set PDDS and LPDS bits for standby mode, and set Clear WUF flag (required per datasheet):
-        PWR->CR |= PWR_CR_CWUF;
-        // Enable wakeup pin bit.
-        PWR->CR |=  PWR_CSR_EWUP;
+            SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
 
-        SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+            // System Control Register Bits. See...
+            // http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0497a/Cihhjgdh.html
+            // Set Power down deepsleep bit.
+            PWR->CR |= PWR_CR_PDDS;
+            // Unset Low-power deepsleep.
+            PWR->CR &= ~PWR_CR_LPDS;
+        
+            // Now go into stop mode, wake up on interrupt
+            asm("    wfi");
 
-        // System Control Register Bits. See...
-        // http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0497a/Cihhjgdh.html
-        // Set Power down deepsleep bit.
-        PWR->CR |= PWR_CR_PDDS;
-        // Unset Low-power deepsleep.
-        PWR->CR &= ~PWR_CR_LPDS;
-    
-        // Now go into stop mode, wake up on interrupt
-        asm("    wfi");
-
-        // Clear SLEEPDEEP bit so we can use SLEEP mode
-        SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+            // Clear SLEEPDEEP bit so we can use SLEEP mode
+            SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+        }
     }
 }
 

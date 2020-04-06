@@ -75,16 +75,6 @@ void warningLedRefresh(void)
             LED0_ON;
             break;
         case WARNING_LED_FLASH :{
-            static bool led_strip_toggle = false;
-            led_strip_toggle = !led_strip_toggle;
-#ifdef USE_LED_STRIP
-            if (rxIsReceivingSignal() && ((getArmingDisableFlags() & ARMING_DISABLED_ARM_SWITCH)) ){
-                if (led_strip_toggle)
-                    ledStripEnable();
-                else
-                    ledStripDisable(false);
-            }
-#endif
             LED0_TOGGLE;
             break;
         }
