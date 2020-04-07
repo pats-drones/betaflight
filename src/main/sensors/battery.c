@@ -231,57 +231,60 @@ void batteryUpdatePresence(void)
         debug[3] = isVoltageStable();
     }
 }
-uint16_t prev_charge_voltage = 0;
+uint16_t avg_charge_voltage_sum = 0,avg_charge_voltage_cnt = 0,averaged_voltage=410,averaged_voltage_prev=410;
 timeUs_t prev_charging_check_update = 0;
+
 static void batteryUpdateVoltageState(timeUs_t currentTimeUs)
 {
+
+    avg_charge_voltage_sum += voltageMeter.filtered;
+    avg_charge_voltage_cnt++;
+    if (currentTimeUs - prev_charging_check_update > 10e6) {
+        averaged_voltage_prev = averaged_voltage;
+        averaged_voltage = avg_charge_voltage_sum/avg_charge_voltage_cnt;
+        avg_charge_voltage_sum = 0;
+        avg_charge_voltage_cnt = 0;
+        prev_charging_check_update = currentTimeUs;
+    }
+
     // alerts are currently used by beeper, osd and other subsystems
     switch (voltageState) {
         case BATTERY_OK:
             if (ARMING_FLAG(ARMED)) {
-                prev_charging_check_update = currentTimeUs;
                 if (voltageMeter.filtered <= (batteryWarningVoltage - batteryConfig()->vbathysteresis)) {
                     voltageState = BATTERY_WARNING;
                 }
            } else {
-                if (currentTimeUs - prev_charging_check_update > 10e6) {
-                    prev_charging_check_update = currentTimeUs;
-                    if (getBatteryAverageCellVoltage() < batteryConfig()->vbatfullcellvoltage-20) {
-                        voltageState = BATTERY_NOT_CHARGING;
-                    }
-                }
+                if (averaged_voltage < batteryConfig()->vbatfullcellvoltage * batteryCellCount &&
+                averaged_voltage <= averaged_voltage_prev )
+                    voltageState = BATTERY_NOT_CHARGING;
            }
             break;
         case BATTERY_NOT_CHARGING:
-            if (ARMING_FLAG(ARMED) || getBatteryAverageCellVoltage() > batteryConfig()->vbatfullcellvoltage-20) {
+            if (ARMING_FLAG(ARMED) || averaged_voltage > batteryConfig()->vbatfullcellvoltage * batteryCellCount ) {
                 voltageState = BATTERY_OK;
-            }  else if (currentTimeUs - prev_charging_check_update > 10e6) {
-                prev_charging_check_update = currentTimeUs;
-                if (voltageMeter.filtered > prev_charge_voltage  + batteryConfig()->vbathysteresis)
+            }  else if ( averaged_voltage > averaged_voltage_prev  + batteryConfig()->vbathysteresis)
                     voltageState = BATTERY_OK;
-            }
             break;
         case BATTERY_WARNING:
             if (voltageMeter.filtered <= (batteryCriticalVoltage - batteryConfig()->vbathysteresis)) {
                 voltageState = BATTERY_CRITICAL;
             } else if (voltageMeter.filtered > batteryWarningVoltage) {
                 voltageState = BATTERY_OK;
-            }
+            } else if (ARMING_FLAG(ARMED)) 
+                        voltageState = BATTERY_NOT_CHARGING;
             break;
 
         case BATTERY_CRITICAL:
             comatize();
             if (voltageMeter.filtered > batteryCriticalVoltage) {
                 voltageState = BATTERY_WARNING;
-            }
+            }  else if (ARMING_FLAG(ARMED)) 
+                        voltageState = BATTERY_NOT_CHARGING;
             break;
 
         default:
             break;
-    }
-    
-    if (currentTimeUs == prev_charging_check_update) {
-        prev_charge_voltage = voltageMeter.filtered;
     }
 }
 
