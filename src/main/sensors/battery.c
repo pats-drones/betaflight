@@ -80,6 +80,8 @@ static batteryState_e batteryState;
 static batteryState_e voltageState;
 static batteryState_e consumptionState;
 
+int sleep_delay_cnt = 0;
+
 #ifndef DEFAULT_CURRENT_METER_SOURCE
 #ifdef USE_VIRTUAL_CURRENT_METER
 #define DEFAULT_CURRENT_METER_SOURCE CURRENT_METER_VIRTUAL
@@ -237,12 +239,14 @@ static void batteryUpdateVoltageState(void)
     // alerts are currently used by beeper, osd and other subsystems
     switch (voltageState) {
         case BATTERY_OK:
+            sleep_delay_cnt = 0;
             if (voltageMeter.filtered <= (batteryWarningVoltage - batteryConfig()->vbathysteresis)) {
                 voltageState = BATTERY_WARNING;
             }
             break;
 
         case BATTERY_WARNING:
+            sleep_delay_cnt = 0;
             if (voltageMeter.filtered <= (batteryCriticalVoltage - batteryConfig()->vbathysteresis)) {
                 voltageState = BATTERY_CRITICAL;
             } else if (voltageMeter.filtered > batteryWarningVoltage) {
@@ -336,38 +340,41 @@ const char * getBatteryStateString(void)
 }
 
 void comatize(void)
-{ 
-    if (!ARMING_FLAG(ARMED) && !usbCableIsInserted() && batteryCellCount>1) {
-        static int sleep_delay_cnt = 0;
-        ledStripDisable(true);
-        LED0_OFF;
-        LED1_OFF;
-        LED2_OFF;
-        pwmDisableMotors();
-        if (sleep_delay_cnt++ > 5) {
-            // Clear PDDS and LPDS bits
-            PWR->CR &= PWR_CR_LPDS | PWR_CR_PDDS | PWR_CR_CWUF;
+{
+    if (sleep_delay_cnt++ > 300) {
+        if (!ARMING_FLAG(ARMED) && !usbCableIsInserted() && batteryCellCount>1) {
+            ledStripDisable(true);
+            LED0_OFF;
+            LED1_OFF;
+            LED2_OFF;
+            pwmDisableMotors();
+            if (sleep_delay_cnt++ > 305) {
+                // Clear PDDS and LPDS bits
+                PWR->CR &= PWR_CR_LPDS | PWR_CR_PDDS | PWR_CR_CWUF;
 
-            // Set PDDS and LPDS bits for standby mode, and set Clear WUF flag (required per datasheet):
-            PWR->CR |= PWR_CR_CWUF;
-            // Enable wakeup pin bit.
-            PWR->CR |=  PWR_CSR_EWUP;
+                // Set PDDS and LPDS bits for standby mode, and set Clear WUF flag (required per datasheet):
+                PWR->CR |= PWR_CR_CWUF;
+                // Enable wakeup pin bit.
+                PWR->CR |=  PWR_CSR_EWUP;
 
-            SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+                SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
 
-            // System Control Register Bits. See...
-            // http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0497a/Cihhjgdh.html
-            // Set Power down deepsleep bit.
-            PWR->CR |= PWR_CR_PDDS;
-            // Unset Low-power deepsleep.
-            PWR->CR &= ~PWR_CR_LPDS;
-        
-            // Now go into stop mode, wake up on interrupt
-            asm("    wfi");
+                // System Control Register Bits. See...
+                // http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0497a/Cihhjgdh.html
+                // Set Power down deepsleep bit.
+                PWR->CR |= PWR_CR_PDDS;
+                // Unset Low-power deepsleep.
+                PWR->CR &= ~PWR_CR_LPDS;
 
-            // Clear SLEEPDEEP bit so we can use SLEEP mode
-            SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+                // Now go into stop mode, wake up on interrupt
+                asm("    wfi");
+
+                // Clear SLEEPDEEP bit so we can use SLEEP mode
+                SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+            }
         }
+    } else {
+        sleep_delay_cnt = 0;
     }
 }
 
