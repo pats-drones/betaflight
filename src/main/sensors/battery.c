@@ -47,6 +47,7 @@
 #include "drivers/light_led.h"
 #include "io/ledstrip.h"
 #include "drivers/pwm_output.h"
+#include "drivers/usb_io.h"
 
 // #include "hw_config.h"
 
@@ -336,7 +337,7 @@ const char * getBatteryStateString(void)
 
 void comatize(void)
 { 
-    if (!ARMING_FLAG(ARMED)) {
+    if (!ARMING_FLAG(ARMED) && !usbCableIsInserted() && batteryCellCount>1) {
         static int sleep_delay_cnt = 0;
         ledStripDisable(true);
         LED0_OFF;
