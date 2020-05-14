@@ -72,6 +72,11 @@ static batteryState_e batteryState;
 static batteryState_e voltageState;
 static batteryState_e consumptionState;
 
+static int32_t chargingVoltage = 0;
+static uint8_t batteryIsCharging = 0;
+static uint8_t batteryIsFull = 0;
+static uint8_t droneIsActive = true;
+
 #ifndef DEFAULT_CURRENT_METER_SOURCE
 #ifdef USE_VIRTUAL_CURRENT_METER
 #define DEFAULT_CURRENT_METER_SOURCE CURRENT_METER_VIRTUAL
@@ -227,8 +232,90 @@ void batteryUpdatePresence(void)
     }
 }
 
+// Estimate the battery voltage while charging
+static void batteryUpdateChargingVoltage(timeUs_t currentTimeUs)
+{    
+    static int32_t chargingVoltageA = 10000;
+    static int32_t chargingVoltageB = 10000;
+    static bool flipFlop = 0;
+
+    if (currentTimeUs % 120000 > 60000)
+    {
+        if (flipFlop)
+        {
+            flipFlop = 0;
+            chargingVoltageA = 10000;
+        }
+    }
+    else
+    {
+        if (!flipFlop)
+        {
+            flipFlop = 1;
+            chargingVoltageB = 10000;
+        }   
+    }
+
+    if (voltageMeter.filtered < chargingVoltageA)
+        chargingVoltageA = voltageMeter.filtered;
+
+    if (voltageMeter.filtered < chargingVoltageB)
+        chargingVoltageB = voltageMeter.filtered;
+
+    chargingVoltage = 10000;
+    if (chargingVoltage > chargingVoltageA)
+        chargingVoltage = chargingVoltageA;
+    if (chargingVoltage > chargingVoltageB)
+        chargingVoltage = chargingVoltageB;
+
+    batteryIsFull = chargingVoltage > 840;
+}
+
+static void batteryUpdateDroneIsActive(void)
+{
+    static int16_t droneIsActiveTimer = 1000;
+
+    if (currentMeter.amperage < 2000)
+    {
+        droneIsActiveTimer -= 50;
+        if (droneIsActiveTimer < 0)
+            droneIsActiveTimer = 0;
+    }
+    else
+    {
+        droneIsActiveTimer = 1000;
+    }
+
+    droneIsActive = droneIsActiveTimer == 0;
+}
+static float voltageDifferential = 0.0;
+
+static void batteryUpdateIsCharging(void)
+{
+    static float oldVoltage = 10;
+
+    float currentVoltage = voltageMeter.unfiltered;
+    //if (!droneIsActive)
+    {
+        float diff = currentVoltage - oldVoltage;
+
+        if (diff < 50)
+        {
+            float alpha = 0.0015;
+
+            voltageDifferential = (1.0 - alpha) * voltageDifferential + alpha * diff;
+        }
+
+        oldVoltage = voltageMeter.unfiltered;
+    }
+
+    batteryIsCharging = voltageDifferential > 0.0;
+}
+
 static void batteryUpdateVoltageState(void)
 {
+    // TODO: Implement signalling for: batteryIsCharging and batteryIsFull
+    
     // alerts are currently used by beeper, osd and other subsystems
     static uint32_t lastVoltageChangeMs;
     switch (voltageState) {
@@ -265,7 +352,6 @@ static void batteryUpdateVoltageState(void)
         default:
             break;
     }
-
 }
 
 static void batteryUpdateLVC(timeUs_t currentTimeUs)
@@ -305,6 +391,9 @@ static void batteryUpdateConsumptionState(void)
 
 void batteryUpdateStates(timeUs_t currentTimeUs)
 {
+    batteryUpdateIsCharging();
+    batteryUpdateDroneIsActive();
+    batteryUpdateChargingVoltage(currentTimeUs);
     batteryUpdateVoltageState();
     batteryUpdateConsumptionState();
     batteryUpdateLVC(currentTimeUs);
