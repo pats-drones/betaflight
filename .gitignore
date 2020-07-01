@@ -31,9 +31,6 @@ mcu.mak
 mcu.mak.old
 stm32.mak
 
-# artefacts for Visual Studio Code
-/.vscode/
-
 # artefacts for CLion
 /cmake-build-debug/
 /CMakeLists.txt
