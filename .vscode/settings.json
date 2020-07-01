@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "platform.h": "c",
+        "hw_config.h": "c",
+        "unordered_map": "c",
+        "unordered_set": "c",
+        "regex": "c",
+        "io.h": "c"
+    }
+}
