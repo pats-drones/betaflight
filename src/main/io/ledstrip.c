@@ -567,13 +567,13 @@ static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
             if (batteryConfig()->voltageMeterSource != VOLTAGE_METER_NONE && getBatteryState() != BATTERY_OK) {
                 warningFlags |= 1 << WARNING_LOW_BATTERY;
             }
-            if (failsafeIsActive()) {
+            if (failsafeIsActive() && rxIsReceivingSignal() && !failsafeIsActive()) {
                 warningFlags |= 1 << WARNING_FAILSAFE;
             }
-            if (!ARMING_FLAG(ARMED) && isArmingDisabled()) {
+            if (!ARMING_FLAG(ARMED) && isArmingDisabled() && rxIsReceivingSignal()&& !failsafeIsActive()) {
                 warningFlags |= 1 << WARNING_ARMING_DISABLED;
             }
-            if (isFlipOverAfterCrashActive()) {
+            if (isFlipOverAfterCrashActive() && rxIsReceivingSignal()&& !failsafeIsActive()) {
                 warningFlags |= 1 << WARNING_CRASH_FLIP_ACTIVE;
             }
         }
