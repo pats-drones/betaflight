@@ -155,6 +155,8 @@ static int lastArmingDisabledReason = 0;
 static timeUs_t lastDisarmTimeUs;
 static int tryingToArm = ARMING_DELAYED_DISARMED;
 
+bool dshot_is_reversed = false;
+
 #ifdef USE_RUNAWAY_TAKEOFF
 static timeUs_t runawayTakeoffDeactivateUs = 0;
 static timeUs_t runawayTakeoffAccumulatedUs = 0;
@@ -509,6 +511,7 @@ void tryArm(void)
             if (!(IS_RC_MODE_ACTIVE(BOXFLIPOVERAFTERCRASH) || (tryingToArm == ARMING_DELAYED_CRASHFLIP))) {
                 flipOverAfterCrashActive = false;
                 if (!featureIsEnabled(FEATURE_3D)) {
+                    dshot_is_reversed = false;
                     dshotCommandWrite(ALL_MOTORS, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
                 }
             } else {
@@ -780,6 +783,17 @@ bool processRx(timeUs_t currentTimeUs)
         if (!IS_RC_MODE_ACTIVE(BOXARM))
             disarm(DISARM_REASON_SWITCH);
     }
+
+    //for reversing motors for pats direct motor control 
+     if(rcData[AUX2] > 1130 && rcData[AUX2] < 1180) {
+            if (!dshot_is_reversed) {
+                dshot_is_reversed = true;
+                dshotCommandWrite(ALL_MOTORS, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
+            }
+        } else if (dshot_is_reversed) {
+            dshotCommandWrite(ALL_MOTORS, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
+            dshot_is_reversed = false;
+        }
 
     updateRSSI(currentTimeUs);
 

@@ -1420,14 +1420,14 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
 
             FALLTHROUGH;
         case LEVEL_MODE_RP:
-        if (axis == FD_YAW) {
-            if (rcData[AUX2] > 1020 && rcData[AUX2] < 1045) // using a small alteration on the mode switch turn on/off headless mode
-        		currentPidSetpoint = pidLevelYaw(axis, currentPidSetpoint);
-            else
-                pidData[FD_YAW].I = 0.0f;
-	 } else
-	    currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint);
-        }
+            if (axis == FD_YAW) {
+                if (rcData[AUX2] > 1020 && rcData[AUX2] < 1045) // using a small alteration on the mode switch turn on/off headless mode
+        		    currentPidSetpoint = pidLevelYaw(axis, currentPidSetpoint);
+                else
+                    pidData[FD_YAW].I = 0.0f;
+	        } else
+	            currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint);
+            }
 #endif
 
 #ifdef USE_ACRO_TRAINER
