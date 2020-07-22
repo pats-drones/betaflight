@@ -129,7 +129,10 @@ enum
     FSSP_DATAID_ACCX       = 0x0700 ,
     FSSP_DATAID_ACCY       = 0x0710 ,
     FSSP_DATAID_ACCZ       = 0x0720 ,
+    FSSP_DATAID_ACCN       = 0x0730 , // Acc nominal
+    FSSP_DATAID_MAX_THRUST = 0x0740 ,
 #endif
+    FSSP_DATAID_THROTTLE   = 0x0120 ,
     FSSP_DATAID_T1         = 0x0400 ,
     FSSP_DATAID_T11        = 0x0401 ,
     FSSP_DATAID_T2         = 0x0410 ,
@@ -163,6 +166,13 @@ static uint16_t frSkyDataIdTable[MAX_DATAIDS];
 
 static uint16_t frSkyEscDataIdTable[MAX_ESC_DATAIDS];
 #endif
+
+/*  global variable for PATS
+    NEEDS TO BE CLEANED UP IN LOCAL!!!! */
+int32_t acctmp[4];
+uint32_t throttle_scaled = 0;
+int32_t max_thrust = 0;
+
 
 typedef struct frSkyTableInfo_s {
     uint16_t * table;
@@ -373,8 +383,18 @@ static void initSmartPortSensors(void)
         if (telemetryIsSensorEnabled(SENSOR_ACC_Z)) {
             ADD_SENSOR(FSSP_DATAID_ACCZ);
         }
+        if (telemetryIsSensorEnabled(SENSOR_ACC_N)) {
+            ADD_SENSOR(FSSP_DATAID_ACCN);
+        }
+        if (telemetryIsSensorEnabled(SENSOR_MAX_THRUST)) {
+            ADD_SENSOR(FSSP_DATAID_MAX_THRUST);
+        }
     }
 #endif
+
+    if (telemetryIsSensorEnabled(SENSOR_THROTTLE)) {
+        ADD_SENSOR(FSSP_DATAID_THROTTLE);
+    }
 
     if (sensors(SENSOR_BARO)) {
         if (telemetryIsSensorEnabled(SENSOR_ALTITUDE)) {
@@ -715,7 +735,26 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 smartPortSendPackage(id, lrintf(100 * acc.accADC[Z] * acc.dev.acc_1G_rec));
                 *clearToSend = false;
                 break;
+            case FSSP_DATAID_ACCN       :
+                acctmp[0] = 100 * acc.accADC[X] * acc.dev.acc_1G_rec;
+                acctmp[1] = 100 * acc.accADC[Y] * acc.dev.acc_1G_rec;
+                acctmp[2] = 100 * acc.accADC[Z] * acc.dev.acc_1G_rec;
+                acctmp[3] = sqrt(acctmp[0] * acctmp[0] + acctmp[1] * acctmp[1] + acctmp[2] * acctmp[2]);
+
+                smartPortSendPackage(id, lrintf(acctmp[3]));
+                *clearToSend = false;
+                break;
+            case FSSP_DATAID_MAX_THRUST :
+                max_thrust = acctmp[3] * (1000/throttle_scaled);
+                smartPortSendPackage(id, lrintf(max_thrust));
+                *clearToSend = false;
+                break;                
 #endif
+            case FSSP_DATAID_THROTTLE   :
+                throttle_scaled = (rcCommand[THROTTLE]-1000);
+                smartPortSendPackage(id, throttle_scaled);
+                *clearToSend = false;
+                break;
             case FSSP_DATAID_T1         :
                 // we send all the flags as decimal digits for easy reading
 
