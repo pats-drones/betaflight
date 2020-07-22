@@ -47,6 +47,7 @@
 #include "fc/config.h"
 #include "fc/controlrate_profile.h"
 #include "fc/rc_controls.h"
+#include "fc/rc.h"
 #include "fc/runtime_config.h"
 
 #include "flight/failsafe.h"
@@ -745,14 +746,12 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 *clearToSend = false;
                 break;
             case FSSP_DATAID_MAX_THRUST :
-                max_thrust = acctmp[3] * (1000/throttle_scaled);
-                smartPortSendPackage(id, lrintf(max_thrust));
+                smartPortSendPackage(id, lrintf(100 * acc.maxThrust));
                 *clearToSend = false;
                 break;                
 #endif
             case FSSP_DATAID_THROTTLE   :
-                throttle_scaled = (rcCommand[THROTTLE]-1000);
-                smartPortSendPackage(id, throttle_scaled);
+                smartPortSendPackage(id, throttleFilter[THROTTLE_NEW]);
                 *clearToSend = false;
                 break;
             case FSSP_DATAID_T1         :

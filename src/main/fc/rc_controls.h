@@ -90,6 +90,13 @@ typedef enum {
 #define THR_CE (3 << (2 * THROTTLE))
 #define THR_HI (2 << (2 * THROTTLE))
 
+#define THROTTLE_OLD                    0
+#define THROTTLE_NEW                    1
+#define THROTTLE_LOW_PASS_CONSTANT      0.01
+#define THROTTLE_RC_MIN                 1000
+#define THROTTLE_RC_MAX                 2000
+
+
 #define CONTROL_RATE_CONFIG_RC_EXPO_MAX  100
 
 #define CONTROL_RATE_CONFIG_RC_RATES_MAX  255
@@ -103,6 +110,8 @@ typedef enum {
 #define CONTROL_RATE_CONFIG_TPA_MAX              100
 
 extern float rcCommand[4];
+extern float throttleScaled;
+extern float throttleFilter[2];
 
 typedef struct rcSmoothingFilterTraining_s {
     float sum;
