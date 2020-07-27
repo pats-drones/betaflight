@@ -134,6 +134,7 @@ enum
     FSSP_DATAID_MAX_THRUST = 0x0740 ,
 #endif
     FSSP_DATAID_THROTTLE   = 0x0120 ,
+    FSSP_DATAID_ARMING     = 0x0130 ,
     FSSP_DATAID_T1         = 0x0400 ,
     FSSP_DATAID_T11        = 0x0401 ,
     FSSP_DATAID_T2         = 0x0410 ,
@@ -173,6 +174,7 @@ static uint16_t frSkyEscDataIdTable[MAX_ESC_DATAIDS];
 int32_t acctmp[4];
 uint32_t throttle_scaled = 0;
 int32_t max_thrust = 0;
+armingDisableFlags_e flags;
 
 
 typedef struct frSkyTableInfo_s {
@@ -395,6 +397,10 @@ static void initSmartPortSensors(void)
 
     if (telemetryIsSensorEnabled(SENSOR_THROTTLE)) {
         ADD_SENSOR(FSSP_DATAID_THROTTLE);
+    }
+    
+    if (telemetryIsSensorEnabled(STATE_ARMING)) {
+        ADD_SENSOR(FSSP_DATAID_ARMING);
     }
 
     if (sensors(SENSOR_BARO)) {
@@ -751,8 +757,21 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 break;                
 #endif
             case FSSP_DATAID_THROTTLE   :
-                smartPortSendPackage(id, throttleFilter[THROTTLE_NEW]);
+                smartPortSendPackage(id, 1000 * throttleFilter[THROTTLE_NEW]);
                 *clearToSend = false;
+                break;
+            case FSSP_DATAID_ARMING     :
+                flags = getArmingDisableFlags();
+                if (flags) {
+                    const int bitpos = ffs(flags) - 1;
+                    flags &= ~(1 << bitpos);
+                    smartPortSendPackage(id, bitpos);
+                    *clearToSend = false;
+                }
+                else{
+                    smartPortSendPackage(id, 50);
+                    *clearToSend = false;
+                }
                 break;
             case FSSP_DATAID_T1         :
                 // we send all the flags as decimal digits for easy reading

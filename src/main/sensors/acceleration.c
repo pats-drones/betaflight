@@ -36,6 +36,9 @@
 #include "config/config_reset.h"
 #include "config/feature.h"
 
+#include "fc/rc_controls.h"
+#include "fc/rc.h"
+
 #include "drivers/accgyro/accgyro.h"
 #include "drivers/accgyro/accgyro_fake.h"
 #include "drivers/accgyro/accgyro_mpu.h"
@@ -509,6 +512,9 @@ void accUpdate(timeUs_t currentTimeUs, rollAndPitchTrims_t *rollAndPitchTrims)
     for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
         accumulatedMeasurements[axis] += acc.accADC[axis];
     }
+
+    /* Max thrust */
+    acc.maxThrust = (acc.accADC[Z] * acc.dev.acc_1G_rec) * ( 1 / throttleFilter[THROTTLE_NEW]);
 }
 
 bool accGetAccumulationAverage(float *accumulationAverage)

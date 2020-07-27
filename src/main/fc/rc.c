@@ -744,7 +744,7 @@ FAST_CODE_NOINLINE void updateRcCommands(void)
     throttleScaled = (rcCommand[THROTTLE] - THROTTLE_RC_MIN) / (THROTTLE_RC_MAX - THROTTLE_RC_MIN);
     throttleFilter[THROTTLE_NEW] = throttleFilter[THROTTLE_OLD] + THROTTLE_LOW_PASS_CONSTANT * (throttleScaled - throttleFilter[THROTTLE_OLD]);
     throttleFilter[THROTTLE_OLD] = throttleFilter[THROTTLE_NEW];
-
+    
     /* Max thrust */
     acc.maxThrust = (acc.accADC[Z] * acc.dev.acc_1G_rec) * ( 1 / throttleFilter[THROTTLE_NEW]);
 

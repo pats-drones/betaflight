@@ -73,7 +73,8 @@ typedef enum {
     SENSOR_ACC_N           = 1 << 20,
     SENSOR_THROTTLE        = 1 << 21,
     SENSOR_MAX_THRUST      = 1 << 22,
-    SENSOR_ALL             = (1 << 23) - 1,
+    STATE_ARMING           = 1 << 23,
+    SENSOR_ALL             = (1 << 24) - 1,
 } sensor_e;
 
 typedef struct telemetryConfig_s {
