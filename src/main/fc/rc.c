@@ -740,13 +740,13 @@ FAST_CODE_NOINLINE void updateRcCommands(void)
         }
     }
 
-    /* LOW PASS FILTER THROTTLE */
-    throttleScaled = (rcCommand[THROTTLE] - THROTTLE_RC_MIN) / (THROTTLE_RC_MAX - THROTTLE_RC_MIN);
-    throttleFilter[THROTTLE_NEW] = throttleFilter[THROTTLE_OLD] + THROTTLE_LOW_PASS_CONSTANT * (throttleScaled - throttleFilter[THROTTLE_OLD]);
-    throttleFilter[THROTTLE_OLD] = throttleFilter[THROTTLE_NEW];
+    // /* LOW PASS FILTER THROTTLE */
+    // throttleScaled = (rcCommand[THROTTLE] - THROTTLE_RC_MIN) / (THROTTLE_RC_MAX - THROTTLE_RC_MIN);
+    // throttleFilter[THROTTLE_NEW] = throttleFilter[THROTTLE_OLD] + THROTTLE_LOW_PASS_CONSTANT * (throttleScaled - throttleFilter[THROTTLE_OLD]);
+    // throttleFilter[THROTTLE_OLD] = throttleFilter[THROTTLE_NEW];
     
-    /* Max thrust */
-    acc.maxThrust = (acc.accADC[Z] * acc.dev.acc_1G_rec) * ( 1 / throttleFilter[THROTTLE_NEW]);
+    // /* Max thrust */
+    // acc.maxThrust = (acc.accADC[Z] * acc.dev.acc_1G_rec) * ( 1 / throttleFilter[THROTTLE_NEW]);
 
     if (FLIGHT_MODE(HEADFREE_MODE)) {
         static t_fp_vector_def  rcCommandBuff;

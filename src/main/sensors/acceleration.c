@@ -513,8 +513,7 @@ void accUpdate(timeUs_t currentTimeUs, rollAndPitchTrims_t *rollAndPitchTrims)
         accumulatedMeasurements[axis] += acc.accADC[axis];
     }
 
-    /* Max thrust */
-    acc.maxThrust = (acc.accADC[Z] * acc.dev.acc_1G_rec) * ( 1 / throttleFilter[THROTTLE_NEW]);
+
 }
 
 bool accGetAccumulationAverage(float *accumulationAverage)

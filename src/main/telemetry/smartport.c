@@ -132,6 +132,7 @@ enum
     FSSP_DATAID_ACCZ       = 0x0720 ,
     FSSP_DATAID_ACCN       = 0x0730 , // Acc nominal
     FSSP_DATAID_MAX_THRUST = 0x0740 ,
+    FSSP_DATAID_ACC_THROTTLE_MIX    = 0x0750, // acceleration on z axis and throttle in same pkg
 #endif
     FSSP_DATAID_THROTTLE   = 0x0120 ,
     FSSP_DATAID_ARMING     = 0x0130 ,
@@ -171,7 +172,8 @@ static uint16_t frSkyEscDataIdTable[MAX_ESC_DATAIDS];
 
 /*  global variable for PATS
     NEEDS TO BE CLEANED UP IN LOCAL!!!! */
-int32_t acctmp[4];
+int acctmp[4];
+uint32_t acc_throttle_mix = 0;
 uint32_t throttle_scaled = 0;
 int32_t max_thrust = 0;
 armingDisableFlags_e flags;
@@ -391,6 +393,9 @@ static void initSmartPortSensors(void)
         }
         if (telemetryIsSensorEnabled(SENSOR_MAX_THRUST)) {
             ADD_SENSOR(FSSP_DATAID_MAX_THRUST);
+        }
+        if (telemetryIsSensorEnabled(SENSOR_ACC_THROTTLE_MIX)){
+            ADD_SENSOR(FSSP_DATAID_ACC_THROTTLE_MIX);
         }
     }
 #endif
@@ -624,7 +629,7 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
 #ifdef USE_ESC_SENSOR_TELEMETRY
         escSensorData_t *escData;
 #endif
-
+        id = FSSP_DATAID_ACC_THROTTLE_MIX;
         switch (id) {
             case FSSP_DATAID_VFAS       :
                 vfasVoltage = getBatteryVoltage();
@@ -754,7 +759,14 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
             case FSSP_DATAID_MAX_THRUST :
                 smartPortSendPackage(id, lrintf(100 * acc.maxThrust));
                 *clearToSend = false;
-                break;                
+                break;    
+            case FSSP_DATAID_ACC_THROTTLE_MIX :
+                acc_throttle_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
+                acc_throttle_mix |= (uint16_t)rcCommand[THROTTLE];
+                smartPortSendPackage(id, acc_throttle_mix);
+                *clearToSend = false;
+                break;    
+                        
 #endif
             case FSSP_DATAID_THROTTLE   :
                 smartPortSendPackage(id, 1000 * throttleFilter[THROTTLE_NEW]);
