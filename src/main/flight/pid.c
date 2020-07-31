@@ -577,7 +577,7 @@ void pidResetIterm(void)
         axisError[axis] = 0.0f;
 #endif
     }
-    if (rcData[AUX2]>1045 && rcData[AUX2]<1080)
+    if (rcData[AUX2]>PATS_YAW_RESET_MIN && rcData[AUX2]<PATS_YAW_RESET_MAX)
     	yaw_angle = -attitude.values.yaw / 10.0f;
 }
 
@@ -1421,7 +1421,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
             FALLTHROUGH;
         case LEVEL_MODE_RP:
             if (axis == FD_YAW) {
-                if (rcData[AUX2] > 1020 && rcData[AUX2] < 1045) // using a small alteration on the mode switch turn on/off headless mode
+                if (rcData[AUX2] > PATS_HEADLESS_DISABLE_MIN && rcData[AUX2] < PATS_HEADLESS_DISABLE_MAX) // using a small alteration on the mode switch turn on/off headless mode
         		    currentPidSetpoint = pidLevelYaw(axis, currentPidSetpoint);
                 else
                     pidData[FD_YAW].I = 0.0f;
@@ -1636,7 +1636,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
 
     // Disable PID control if at zero throttle or if gyro overflow detected
     // This may look very innefficient, but it is done on purpose to always show real CPU usage as in flight
-    if (!pidStabilisationEnabled || gyroOverflowDetected() || (rcData[AUX2]>1080 && rcData[AUX2]<1105)) {
+    if (!pidStabilisationEnabled || gyroOverflowDetected() || (rcData[AUX2]>PID_LOOP_DISABLED_MIN && rcData[AUX2]<PID_LOOP_DISABLED_MAX)) {
         for (int axis = FD_ROLL; axis <= FD_YAW; ++axis) {
             pidData[axis].P = 0;
             pidData[axis].I = 0;
