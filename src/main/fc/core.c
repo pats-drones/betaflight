@@ -787,7 +787,7 @@ bool processRx(timeUs_t currentTimeUs)
     }
 
     //for reversing motors for pats direct motor control 
-     if(rcData[AUX2] > 1130 && rcData[AUX2] < 1180) {
+     if(rcData[AUX2] > PATS_DIRECT_SPIN_MOTOR_REVERSED_MIN && rcData[AUX2] < PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX) {
             if (!dshot_is_reversed) {
                 dshot_is_reversed = true;
                 dshotCommandWrite(ALL_MOTORS, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);

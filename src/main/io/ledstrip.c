@@ -573,7 +573,7 @@ static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
             if (!ARMING_FLAG(ARMED) && isArmingDisabled() && rxIsReceivingSignal()&& !failsafeIsActive()) {
                 warningFlags |= 1 << WARNING_ARMING_DISABLED;
             }
-            if (isFlipOverAfterCrashActive() || (rcData[AUX2] > 1130 && rcData[AUX2] < 1180)) {
+            if (isFlipOverAfterCrashActive() || (rcData[AUX2] > PATS_DIRECT_SPIN_MOTOR_REVERSED_MIN && rcData[AUX2] < PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX)) {
                 warningFlags |= 1 << WARNING_CRASH_FLIP_ACTIVE;
             }
         }

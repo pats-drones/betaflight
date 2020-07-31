@@ -180,7 +180,7 @@ static void taskUpdateRxMain(timeUs_t currentTimeUs)
 
         //direct motor control from pats basestation
     static bool motors_disarm_needs_reset = false;
-    if (!ARMING_FLAG(ARMED) && rcData[AUX2] > 1105 && rcData[AUX2] < 1180) {
+    if (!ARMING_FLAG(ARMED) && rcData[AUX2] > PATS_DIRECT_SPIN_MOTOR_MIN && rcData[AUX2] < PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX) {
             motors_disarm_needs_reset = true;
 
             if (rcData[ROLL]<1000)
