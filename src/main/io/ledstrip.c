@@ -567,10 +567,10 @@ static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
             if (batteryConfig()->voltageMeterSource != VOLTAGE_METER_NONE && getBatteryState() != BATTERY_OK) {
                 warningFlags |= 1 << WARNING_LOW_BATTERY;
             }
-            // if (failsafeIsActive()) {
-            //     warningFlags |= 1 << WARNING_FAILSAFE;
-            // }
-            if (!ARMING_FLAG(ARMED) && isArmingDisabled() && rxIsReceivingSignal()&& !failsafeIsActive()) {
+            if (failsafeIsActive()) {
+                warningFlags |= 1 << WARNING_FAILSAFE;
+            }
+            if (ARMING_FLAG(ARMED) && isArmingDisabled() && rxIsReceivingSignal()&& !failsafeIsActive()) {
                 warningFlags |= 1 << WARNING_ARMING_DISABLED;
             }
             if (isFlipOverAfterCrashActive() || (rcData[AUX2] > PATS_DIRECT_SPIN_MOTOR_REVERSED_MIN && rcData[AUX2] < PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX)) {
@@ -604,7 +604,7 @@ static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
         }
     } else {
         if (isBeeperOn()) {
-            warningColor = &hsv[ledStripConfig()->ledstrip_visual_beeper_color];
+         //   warningColor = &hsv[ledStripConfig()->ledstrip_visual_beeper_color];
         }
     }
 
@@ -702,7 +702,7 @@ static void applyLedVtxLayer(bool updateNow, timeUs_t *timer)
         }
         hsvColor_t color = ledStripStatusModeConfig()->colors[colorIndex];
         color.v = (vtxStatus & VTX_STATUS_PIT_MODE) ? (blink ? 15 : 0) : 255; // blink when in pit mode
-        applyLedHsv(LED_MOV_OVERLAY(LED_FLAG_OVERLAY(LED_OVERLAY_VTX)), &color);
+        //applyLedHsv(LED_MOV_OVERLAY(LED_FLAG_OVERLAY(LED_OVERLAY_VTX)), &color);
     }
 }
 #endif
@@ -738,7 +738,7 @@ static void applyLedBatteryLayer(bool updateNow, timeUs_t *timer)
 
     if (!flash) {
        const hsvColor_t *bgc = getSC(LED_SCOLOR_BACKGROUND);
-       applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_BATTERY), bgc);
+       //applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_BATTERY), bgc);
     }
 }
 
@@ -767,7 +767,7 @@ static void applyLedRssiLayer(bool updateNow, timeUs_t *timer)
 
     if (!flash) {
         const hsvColor_t *bgc = getSC(LED_SCOLOR_BACKGROUND);
-        applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_RSSI), bgc);
+        //applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_RSSI), bgc);
     }
 }
 
@@ -805,7 +805,7 @@ static void applyLedGpsLayer(bool updateNow, timeUs_t *timer)
         }
     }
 
-    applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_GPS), gpsColor);
+    //applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_GPS), gpsColor);
 }
 #endif
 
