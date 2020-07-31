@@ -853,7 +853,7 @@ STATIC_UNIT_TESTED float pidLevelYaw(int axis, float currentPidSetpoint) {
 
     if (FLIGHT_MODE(ANGLE_MODE) ) {
         // ANGLE mode - control is angle based
-        currentPidSetpoint = errorAngle * levelGain;
+        currentPidSetpoint = errorAngle * levelGain * 0.1;
     } 
     return currentPidSetpoint;
 }
