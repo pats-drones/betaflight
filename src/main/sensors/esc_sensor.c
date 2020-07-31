@@ -118,7 +118,7 @@ static volatile uint8_t bufferPosition = 0;
 
 static serialPort_t *escSensorPort = NULL;
 
-static escSensorData_t escSensorData[MAX_SUPPORTED_MOTORS];
+extern escSensorData_t escSensorData[MAX_SUPPORTED_MOTORS];
 
 static escSensorTriggerState_t escSensorTriggerState = ESC_SENSOR_TRIGGER_STARTUP;
 static uint32_t escTriggerTimestamp;

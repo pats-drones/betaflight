@@ -20,6 +20,13 @@
 
 #pragma once
 
+enum
+{
+    NEW = 0,
+    OLD,
+    OLDER
+};
+
 typedef enum {
     X = 0,
     Y,

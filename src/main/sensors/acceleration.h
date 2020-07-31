@@ -50,7 +50,9 @@ typedef struct acc_s {
     accDev_t dev;
     uint32_t accSamplingInterval;
     float accADC[XYZ_AXIS_COUNT];
+    float acc_z_filter[2];
     float maxThrust;
+    float thrust_rpm;
     bool isAccelUpdatedAtLeastOnce;
 } acc_t;
 
