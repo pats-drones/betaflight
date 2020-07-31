@@ -526,7 +526,7 @@ void pidResetIterm(void)
         axisError[axis] = 0.0f;
 #endif
     }
-    if (rcData[AUX2]>PATS_YAW_RESET_MIN && rcData[AUX2]<PATS_YAW_RESET_MAX)
+    if ((rcData[AUX2]>PATS_YAW_RESET_MIN && rcData[AUX2]<PATS_YAW_RESET_MAX) || !ARMING_FLAG(ARMED))
     	yaw_angle = -attitude.values.yaw / 10.0f;
 }
 
