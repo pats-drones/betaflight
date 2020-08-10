@@ -86,6 +86,7 @@ static FAST_RAM_ZERO_INIT float motorMixRange;
 
 float FAST_RAM_ZERO_INIT motor[MAX_SUPPORTED_MOTORS];
 float motor_disarmed[MAX_SUPPORTED_MOTORS];
+pt1Filter_t throttleFilterForThrustPrediction;
 
 mixerMode_e currentMixerMode;
 static motorMixer_t currentMixer[MAX_SUPPORTED_MOTORS];
@@ -375,6 +376,7 @@ void mixerInitProfile(void)
 
 void mixerInit(mixerMode_e mixerMode)
 {
+    pt1FilterInit(&throttleFilterForThrustPrediction, 0.5);
     currentMixerMode = mixerMode;
 
     initEscEndpoints();
@@ -931,11 +933,17 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs, uint8_t vbatPidCompensa
     const float p3 = 1.5758e-05;
     const float p4 = -0.015097;
     const float p5 = 4.8412;
+
     float tmp_throttle = 1000 * throttle + 950;
+    tmp_throttle = pt1FilterApply(&throttleFilterForThrustPrediction, tmp_throttle);
+
     float pred_thrust =  (p1 * sq(sq(tmp_throttle)) + p2 * tmp_throttle * sq(tmp_throttle) + p3 * sq(tmp_throttle) + p4 * tmp_throttle + p5) * 1000;
     DEBUG_SET(DEBUG_RPM_FILTER, 1, (int) pred_thrust);
-    pred_thrust = (p5 + tmp_throttle*(p4 + tmp_throttle*(p3 + tmp_throttle*(p4 + tmp_throttle*p5))))*1000;
-    DEBUG_SET(DEBUG_RPM_FILTER, 2, (int) pred_thrust);
+
+    float pred_thrust2 = (p5 + tmp_throttle*(p4 + tmp_throttle*(p3 + tmp_throttle*(p4 + tmp_throttle*p5))))*1000;
+    DEBUG_SET(DEBUG_RPM_FILTER, 2, (int) pred_thrust2);
+
+    pt1FilterApply(&throttleFilterForThrustPrediction, tmp_throttle);
     DEBUG_SET(DEBUG_RPM_FILTER, 3, tmp_throttle);
 
 #if defined(USE_THROTTLE_BOOST)
