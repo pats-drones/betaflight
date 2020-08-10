@@ -187,11 +187,15 @@ FAST_CODE_NOINLINE void rpmFilterUpdate()
         return;
     }
 
+    float acc_z_rpm = 0;
+
     for (int motor = 0; motor < getMotorCount(); motor++) {
         filteredMotorErpm[motor] = pt1FilterApply(&rpmFilters[motor], getDshotTelemetry(motor));
-        if (motor < 4) {
-            DEBUG_SET(DEBUG_RPM_FILTER, motor, motorFrequency[motor]);
-        }
+        //if (motor < 4) {
+        //DEBUG_SET(DEBUG_RPM_FILTER, motor, motorFrequency[motor]);
+        //}
+        acc_z_rpm = acc_z_rpm + 0.000018652 * sq(motorFrequency[motor]);
+        thrust_estimation_rpm_based = acc_z_rpm;
     }
 
     for (int i = 0; i < filterUpdatesPerIteration; i++) {

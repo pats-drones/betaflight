@@ -925,6 +925,17 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs, uint8_t vbatPidCompensa
     // reestablish old throttle stick feel by counter compensating thrust linearization
     throttle = pidCompensateThrustLinearization(throttle);
 #endif
+    const float p1 = 9.1021e-13;
+    const float p2 = -6.4058e-09;
+    const float p3 = 1.5758e-05;
+    const float p4 = -0.015097;
+    const float p5 = 4.8412;
+    float tmp_throttle = 1000 * throttle + 950;
+    float pred_thrust =  (p1 * sq(sq(tmp_throttle)) + p2 * tmp_throttle * sq(tmp_throttle) + p3 * sq(tmp_throttle) + p4 * tmp_throttle + p5) * 1000;
+    DEBUG_SET(DEBUG_RPM_FILTER, 1, (int) pred_thrust);
+    pred_thrust = (p5 + tmp_throttle*(p4 + tmp_throttle*(p3 + tmp_throttle*(p4 + tmp_throttle*p5))))*1000;
+    DEBUG_SET(DEBUG_RPM_FILTER, 2, (int) pred_thrust);
+    DEBUG_SET(DEBUG_RPM_FILTER, 3, tmp_throttle);
 
 #if defined(USE_THROTTLE_BOOST)
     if (throttleBoost > 0.0f) {
