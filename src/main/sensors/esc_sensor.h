@@ -36,7 +36,7 @@ typedef struct {
     int16_t voltage;     // 0.01V
     int32_t current;     // 0.01A
     int32_t consumption; // mAh
-    int16_t rpm;         // 0.01erpm
+    uint32_t rpm;         // 0.01erpm
 } escSensorData_t;
 
 #define ESC_DATA_INVALID 255

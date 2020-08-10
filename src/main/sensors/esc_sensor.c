@@ -46,6 +46,7 @@
 #include "drivers/serial_uart.h"
 
 #include "esc_sensor.h"
+#include "sensors/acceleration.h"
 
 #include "fc/config.h"
 
@@ -118,11 +119,11 @@ static volatile uint8_t bufferPosition = 0;
 
 static serialPort_t *escSensorPort = NULL;
 
-extern escSensorData_t escSensorData[MAX_SUPPORTED_MOTORS];
-
 static escSensorTriggerState_t escSensorTriggerState = ESC_SENSOR_TRIGGER_STARTUP;
 static uint32_t escTriggerTimestamp;
 static uint8_t escSensorMotor = 0;      // motor index
+
+static escSensorData_t escSensorData[MAX_SUPPORTED_MOTORS];
 
 static escSensorData_t combinedEscSensorData;
 static bool combinedDataNeedsUpdate = true;
@@ -265,7 +266,6 @@ static uint8_t decodeEscFrame(void)
         escSensorData[escSensorMotor].current = telemetryBuffer[3] << 8 | telemetryBuffer[4];
         escSensorData[escSensorMotor].consumption = telemetryBuffer[5] << 8 | telemetryBuffer[6];
         escSensorData[escSensorMotor].rpm = telemetryBuffer[7] << 8 | telemetryBuffer[8];
-
         combinedDataNeedsUpdate = true;
 
         frameStatus = ESC_SENSOR_FRAME_COMPLETE;

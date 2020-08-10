@@ -53,6 +53,8 @@ typedef struct acc_s {
     float acc_z_filter[2];
     float maxThrust;
     float thrust_rpm;
+    float thrust_pred;
+    int16_t rpm[4];
     bool isAccelUpdatedAtLeastOnce;
 } acc_t;
 

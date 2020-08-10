@@ -92,7 +92,7 @@ typedef enum {
 
 #define THROTTLE_OLD                    0
 #define THROTTLE_NEW                    1
-#define THROTTLE_LOW_PASS_CONSTANT      0.01
+#define THROTTLE_LOW_PASS_CONSTANT      0.3
 #define THROTTLE_RC_MIN                 1000
 #define THROTTLE_RC_MAX                 2000
 

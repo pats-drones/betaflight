@@ -170,12 +170,14 @@ static uint16_t frSkyDataIdTable[MAX_DATAIDS];
 #define MAX_ESC_DATAIDS 4
 
 static uint16_t frSkyEscDataIdTable[MAX_ESC_DATAIDS];
+
 #endif
 
 /*  global variable for PATS
     NEEDS TO BE CLEANED UP IN LOCAL!!!! */
 int acctmp[4];
 uint32_t acc_throttle_mix = 0;
+uint32_t acc_rpm_mix = 0;
 uint32_t throttle_scaled = 0;
 int32_t max_thrust = 0;
 
@@ -769,15 +771,16 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 break;    
             case FSSP_DATAID_ACC_THROTTLE_MIX :
                 acc_throttle_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
-                acc_throttle_mix |= (uint16_t)rcCommand[THROTTLE];
+                acc_throttle_mix |= (uint16_t)(rcCommand[THROTTLE]);
                 smartPortSendPackage(id, acc_throttle_mix);
                 *clearToSend = false;
                 break; 
             case FSSP_DATAID_ACC_RPM_MIX :
-                acc_throttle_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
-                acc_throttle_mix |= (uint16_t)(100 * acc.thrust_rpm);
-                smartPortSendPackage(id, acc_throttle_mix);
-                *clearToSend = false;
+                acc_rpm_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
+                acc_rpm_mix |= (uint16_t)(100 * acc.thrust_rpm);
+                smartPortSendPackage(id, acc_rpm_mix);
+                // smartPortSendPackage(0x0500, acc.rpm[0]);
+                *clearToSend = false;           
                 break;                            
 #endif
             case FSSP_DATAID_THROTTLE   :
