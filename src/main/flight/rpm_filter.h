@@ -38,10 +38,11 @@ typedef struct rpmFilterConfig_s
 
 PG_DECLARE(rpmFilterConfig_t, rpmFilterConfig);
 
-float thrust_estimation_rpm_based;
 void  rpmFilterInit(const rpmFilterConfig_t *config);
 float rpmFilterGyro(int axis, float values);
 float rpmFilterDterm(int axis, float values);
 void  rpmFilterUpdate();
 bool isRpmFilterEnabled(void);
 float rpmMinMotorFrequency();
+extern float thrust_estimation_rpm_based;
+

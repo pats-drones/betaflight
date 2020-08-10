@@ -79,6 +79,7 @@ FAST_RAM_ZERO_INIT static uint8_t currentHarmonic;
 FAST_RAM_ZERO_INIT static uint8_t currentFilterNumber;
 FAST_RAM static rpmNotchFilter_t* currentFilter = &filters[0];
 
+float thrust_estimation_rpm_based = 0;
 
 
 PG_REGISTER_WITH_RESET_FN(rpmFilterConfig_t, rpmFilterConfig, PG_RPM_FILTER_CONFIG, 3);
