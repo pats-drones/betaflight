@@ -525,33 +525,8 @@ void accUpdate(timeUs_t currentTimeUs, rollAndPitchTrims_t *rollAndPitchTrims)
     for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
         accumulatedMeasurements[axis] += acc.accADC[axis];
     }
-
-    /* LOW PASS FILTER THROTTLE */
-    acc.acc_z_filter[NEW] = acc.acc_z_filter[OLD] + ACC_LOW_PASS_CONSTANT * (acc.accADC[Z] - acc.acc_z_filter[OLD]);
-    acc.acc_z_filter[OLD] = acc.acc_z_filter[NEW];
-
-    /* LOW PASS FILTER THROTTLE */
-    throttleScaled = (rcCommand[THROTTLE] - THROTTLE_RC_MIN);
-    throttleFilter[THROTTLE_NEW] = throttleFilter[THROTTLE_OLD] + THROTTLE_LOW_PASS_CONSTANT * (throttleScaled - throttleFilter[THROTTLE_OLD]);
-    throttleFilter[THROTTLE_OLD] = throttleFilter[THROTTLE_NEW];
-
-    acc.thrust_pred = (P1 * powf(throttleFilter[THROTTLE_NEW], 4) +  
-                   P2 * powf(throttleFilter[THROTTLE_NEW], 3) + 
-                   P3 * powf(throttleFilter[THROTTLE_NEW], 2) + 
-                   P4 * throttleFilter[THROTTLE_NEW] + P5);
     
-    for (int motor = 0; motor < 4; motor++) {
-        acc.rpm[motor] = getDshotTelemetry(motor);
-        // acc.rpm[motor] *= 100.0f / (12 / 2.0f);  // convert erpm freq to RPM.
-    }
-    
-    acc.thrust_rpm =  (acc.rpm[0] * acc.rpm[0] +
-                    acc.rpm[1] * acc.rpm[1] +
-                    acc.rpm[2] * acc.rpm[2] +
-                    acc.rpm[3] * acc.rpm[3]) * C_T;
-
-    acc.maxThrust = acc.acc_z_filter[NEW]/acc.thrust_pred;
-
+    calculateMaxThrust();
 
 }
 
@@ -593,4 +568,37 @@ void applyAccelerometerTrimsDelta(rollAndPitchTrims_t *rollAndPitchTrimsDelta)
     accelerometerConfigMutable()->accelerometerTrims.values.roll += rollAndPitchTrimsDelta->values.roll;
     accelerometerConfigMutable()->accelerometerTrims.values.pitch += rollAndPitchTrimsDelta->values.pitch;
 }
+
+void calculateMaxThrust(void)
+{
+    /* LOW PASS FILTER ACC[Z] */
+    acc.acc_z_filter[NEW] = acc.acc_z_filter[OLD] + ACC_LOW_PASS_CONSTANT * (acc.accADC[Z] - acc.acc_z_filter[OLD]);
+    acc.acc_z_filter[OLD] = acc.acc_z_filter[NEW];
+
+    /* LOW PASS FILTER THROTTLE */
+    throttleScaled = (rcCommand[THROTTLE] - THROTTLE_RC_MIN);
+    throttleFilter[THROTTLE_NEW] = throttleFilter[THROTTLE_OLD] + THROTTLE_LOW_PASS_CONSTANT * (throttleScaled - throttleFilter[THROTTLE_OLD]);
+    throttleFilter[THROTTLE_OLD] = throttleFilter[THROTTLE_NEW];
+
+    /* THROTTLE POLYNOMIAL */
+    acc.thrust_pred = (P1 * powf(throttleFilter[THROTTLE_NEW], 4) +  
+                   P2 * powf(throttleFilter[THROTTLE_NEW], 3) + 
+                   P3 * powf(throttleFilter[THROTTLE_NEW], 2) + 
+                   P4 * throttleFilter[THROTTLE_NEW] + P5);
+    
+    /* RPM UPDATE */
+    for (int motor = 0; motor < 4; motor++) {
+        acc.rpm[motor] = getDshotTelemetry(motor);
+    }
+    
+    /* RPM TO THRUST */
+    acc.thrust_rpm =  (acc.rpm[0] * acc.rpm[0] +
+                    acc.rpm[1] * acc.rpm[1] +
+                    acc.rpm[2] * acc.rpm[2] +
+                    acc.rpm[3] * acc.rpm[3]) * C_T;
+
+    /* MAX THRUST UPDATE */
+    acc.maxThrust = acc.acc_z_filter[NEW]/acc.thrust_pred;
+}
+
 #endif

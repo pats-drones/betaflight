@@ -173,13 +173,7 @@ static uint16_t frSkyEscDataIdTable[MAX_ESC_DATAIDS];
 
 #endif
 
-/*  global variable for PATS
-    NEEDS TO BE CLEANED UP IN LOCAL!!!! */
-int acctmp[4];
-uint32_t acc_throttle_mix = 0;
-uint32_t acc_rpm_mix = 0;
-uint32_t throttle_scaled = 0;
-int32_t max_thrust = 0;
+
 
 armingDisableFlags_e flags;
 
@@ -547,6 +541,12 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
     static uint8_t t1Cnt = 0;
     static uint8_t t2Cnt = 0;
     static uint8_t skipRequests = 0;
+
+    /*  local variable for PATS    */
+    int acctmp[4];
+    uint32_t acc_throttle_mix = 0;
+    uint32_t acc_rpm_mix = 0;
+
 #ifdef USE_ESC_SENSOR_TELEMETRY
     static uint8_t smartPortIdOffset = 0;
 #endif
@@ -757,11 +757,10 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 *clearToSend = false;
                 break;
             case FSSP_DATAID_ACCN       :
-                acctmp[0] = 100 * acc.accADC[X] * acc.dev.acc_1G_rec;
-                acctmp[1] = 100 * acc.accADC[Y] * acc.dev.acc_1G_rec;
-                acctmp[2] = 100 * acc.accADC[Z] * acc.dev.acc_1G_rec;
-                acctmp[3] = sqrt(acctmp[0] * acctmp[0] + acctmp[1] * acctmp[1] + acctmp[2] * acctmp[2]);
-
+                acctmp[X] = 100 * acc.accADC[X] * acc.dev.acc_1G_rec;
+                acctmp[Y] = 100 * acc.accADC[Y] * acc.dev.acc_1G_rec;
+                acctmp[Z] = 100 * acc.accADC[Z] * acc.dev.acc_1G_rec;
+                acctmp[N] = sqrt(acctmp[X] * acctmp[X] + acctmp[Y] * acctmp[Y] + acctmp[Z] * acctmp[Z]);
                 smartPortSendPackage(id, lrintf(acctmp[3]));
                 *clearToSend = false;
                 break;
@@ -779,7 +778,7 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 acc_rpm_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
                 acc_rpm_mix |= (uint16_t)(100 * acc.thrust_rpm);
                 smartPortSendPackage(id, acc_rpm_mix);
-                // smartPortSendPackage(0x0500, acc.rpm[0]);
+                // smartPortSendPackage(0x0500, acc.rpm[0]); // check if rpm is sent correctly
                 *clearToSend = false;           
                 break;                            
 #endif
