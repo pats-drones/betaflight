@@ -52,6 +52,11 @@ typedef struct acc_s {
     accDev_t dev;
     uint16_t sampleRateHz;
     float accADC[XYZ_AXIS_COUNT];
+    float acc_z_filter[2];
+    float maxThrust;
+    float thrust_rpm;
+    float thrust_pred;
+    int16_t rpm[4];
     bool isAccelUpdatedAtLeastOnce;
 } acc_t;
 
@@ -90,3 +95,4 @@ union flightDynamicsTrims_u;
 void setAccelerationTrims(union flightDynamicsTrims_u *accelerationTrimsToUse);
 void accInitFilters(void);
 void applyAccelerometerTrimsDelta(union rollAndPitchTrims_u *rollAndPitchTrimsDelta);
+void calculateMaxThrust(void);

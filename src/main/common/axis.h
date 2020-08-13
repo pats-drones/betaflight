@@ -20,10 +20,18 @@
 
 #pragma once
 
+enum
+{
+    NEW = 0,
+    OLD,
+    OLDER
+};
+
 typedef enum {
     X = 0,
     Y,
-    Z
+    Z,
+    N
 } axis_e;
 
 #define XYZ_AXIS_COUNT 3
