@@ -130,6 +130,8 @@ enum
     FSSP_DATAID_ACCY       = 0x0710 ,
     FSSP_DATAID_ACCZ       = 0x0720 ,
 #endif
+    FSSP_DATAID_THROTTLE   = 0x0120 ,
+    FSSP_DATAID_ARMING     = 0x0130 ,
     FSSP_DATAID_T1         = 0x0400 ,
     FSSP_DATAID_T11        = 0x0401 ,
     FSSP_DATAID_T2         = 0x0410 ,
@@ -163,6 +165,9 @@ static uint16_t frSkyDataIdTable[MAX_DATAIDS];
 
 static uint16_t frSkyEscDataIdTable[MAX_ESC_DATAIDS];
 #endif
+
+
+armingDisableFlags_e flags;
 
 typedef struct frSkyTableInfo_s {
     uint16_t * table;
@@ -376,6 +381,13 @@ static void initSmartPortSensors(void)
     }
 #endif
 
+    if (telemetryIsSensorEnabled(SENSOR_THROTTLE)) {
+        ADD_SENSOR(FSSP_DATAID_THROTTLE);
+    }
+    
+    if (telemetryIsSensorEnabled(STATE_ARMING)) {
+        ADD_SENSOR(FSSP_DATAID_ARMING);
+    }
     if (sensors(SENSOR_BARO)) {
         if (telemetryIsSensorEnabled(SENSOR_ALTITUDE)) {
             ADD_SENSOR(FSSP_DATAID_ALTITUDE);
@@ -506,6 +518,10 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
     static uint8_t t1Cnt = 0;
     static uint8_t t2Cnt = 0;
     static uint8_t skipRequests = 0;
+
+    /*  local variable for PATS    */
+    int acctmp[4];
+
 #ifdef USE_ESC_SENSOR_TELEMETRY
     static uint8_t smartPortIdOffset = 0;
 #endif
@@ -716,6 +732,23 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 *clearToSend = false;
                 break;
 #endif
+            case FSSP_DATAID_THROTTLE   :
+                smartPortSendPackage(id, 1000 * throttleFilter[THROTTLE_NEW]);
+                *clearToSend = false;
+                break;
+            case FSSP_DATAID_ARMING     :
+                flags = getArmingDisableFlags();
+                if (flags) {
+                    const int bitpos = ffs(flags) - 1;
+                    flags &= ~(1 << bitpos);
+                    smartPortSendPackage(id, bitpos);
+                    *clearToSend = false;
+                }
+                else{
+                    smartPortSendPackage(id, 50);
+                    *clearToSend = false;
+                }
+                break;
             case FSSP_DATAID_T1         :
                 // we send all the flags as decimal digits for easy reading
 
