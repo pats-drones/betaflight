@@ -46,6 +46,7 @@
 #include "drivers/serial_uart.h"
 
 #include "esc_sensor.h"
+#include "sensors/acceleration.h"
 
 #include "fc/config.h"
 
@@ -124,6 +125,7 @@ static escSensorTriggerState_t escSensorTriggerState = ESC_SENSOR_TRIGGER_STARTU
 static uint32_t escTriggerTimestamp;
 static uint8_t escSensorMotor = 0;      // motor index
 
+static escSensorData_t escSensorData[MAX_SUPPORTED_MOTORS];
 static escSensorData_t combinedEscSensorData;
 static bool combinedDataNeedsUpdate = true;
 

@@ -47,6 +47,7 @@
 #include "fc/config.h"
 #include "fc/controlrate_profile.h"
 #include "fc/rc_controls.h"
+#include "fc/rc.h"
 #include "fc/runtime_config.h"
 
 #include "flight/failsafe.h"
@@ -129,6 +130,9 @@ enum
     FSSP_DATAID_ACCX       = 0x0700 ,
     FSSP_DATAID_ACCY       = 0x0710 ,
     FSSP_DATAID_ACCZ       = 0x0720 ,
+    FSSP_DATAID_MAX_THRUST = 0x0740 ,
+    FSSP_DATAID_ACC_THROTTLE_MIX    = 0x0750, // acceleration on z axis and throttle in same pkg
+    FSSP_DATAID_ACC_RPM_MIX         = 0x0760, // acceleration on z axis and throttle in same pkg
 #endif
     FSSP_DATAID_THROTTLE   = 0x0120 ,
     FSSP_DATAID_ARMING     = 0x0130 ,
@@ -378,6 +382,15 @@ static void initSmartPortSensors(void)
         if (telemetryIsSensorEnabled(SENSOR_ACC_Z)) {
             ADD_SENSOR(FSSP_DATAID_ACCZ);
         }
+        if (telemetryIsSensorEnabled(SENSOR_MAX_THRUST)) {
+            ADD_SENSOR(FSSP_DATAID_MAX_THRUST);
+        }
+        if (telemetryIsSensorEnabled(SENSOR_ACC_THROTTLE_MIX)){
+            ADD_SENSOR(FSSP_DATAID_ACC_THROTTLE_MIX);
+        }
+        if (telemetryIsSensorEnabled(SENSOR_ACC_RPM_MIX)){
+            ADD_SENSOR(FSSP_DATAID_ACC_RPM_MIX);
+        }
     }
 #endif
 
@@ -520,7 +533,8 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
     static uint8_t skipRequests = 0;
 
     /*  local variable for PATS    */
-    int acctmp[4];
+    uint32_t acc_throttle_mix = 0;
+    uint32_t acc_rpm_mix = 0;
 
 #ifdef USE_ESC_SENSOR_TELEMETRY
     static uint8_t smartPortIdOffset = 0;
@@ -731,6 +745,22 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 smartPortSendPackage(id, lrintf(100 * acc.accADC[Z] * acc.dev.acc_1G_rec));
                 *clearToSend = false;
                 break;
+            case FSSP_DATAID_MAX_THRUST :
+                smartPortSendPackage(id, lrintf(100 * acc.maxThrust));
+                *clearToSend = false;
+                break;    
+            case FSSP_DATAID_ACC_THROTTLE_MIX :
+                acc_throttle_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
+                acc_throttle_mix |= (uint16_t)(rcCommand[THROTTLE]);
+                smartPortSendPackage(id, acc_throttle_mix);
+                *clearToSend = false;
+                break; 
+            case FSSP_DATAID_ACC_RPM_MIX :
+                acc_rpm_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
+                acc_rpm_mix |= (uint16_t)(100 * acc.thrust_rpm);
+                smartPortSendPackage(id, acc_rpm_mix);
+                *clearToSend = false;           
+                break;                            
 #endif
             case FSSP_DATAID_THROTTLE   :
                 smartPortSendPackage(id, 1000 * throttleFilter[THROTTLE_NEW]);

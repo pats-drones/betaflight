@@ -36,6 +36,9 @@
 #include "config/config_reset.h"
 #include "config/feature.h"
 
+#include "fc/rc_controls.h"
+#include "fc/rc.h"
+
 #include "drivers/accgyro/accgyro.h"
 #include "drivers/accgyro/accgyro_fake.h"
 #include "drivers/accgyro/accgyro_mpu.h"
@@ -48,6 +51,9 @@
 #include "drivers/accgyro/accgyro_spi_mpu6000.h"
 #include "drivers/accgyro/accgyro_spi_mpu6500.h"
 #include "drivers/accgyro/accgyro_spi_mpu9250.h"
+#include "drivers/dshot.h"
+
+#include "telemetry/smartport.h"
 
 #ifdef USE_ACC_ADXL345
 #include "drivers/accgyro_legacy/accgyro_adxl345.h"
@@ -79,12 +85,20 @@
 #include "sensors/boardalignment.h"
 #include "sensors/gyro.h"
 #include "sensors/sensors.h"
+#include "sensors/esc_sensor.h"
 
 #include "acceleration.h"
 
 #define CALIBRATING_ACC_CYCLES              400
+#define ACC_LOW_PASS_CONSTANT               0.5
+#define C_T                                 0.0000001601f
+#define P1                                  9.1021e-13
+#define P2                                  -6.4058e-09
+#define P3                                  1.5758e-05
+#define P4                                  -0.015097
+#define P5                                  4.8412
 
-FAST_RAM_ZERO_INIT acc_t acc;                       // acc access functions
+FAST_RAM_ZERO_INIT  acc_t acc;                       // acc access functions
 
 void resetRollAndPitchTrims(rollAndPitchTrims_t *rollAndPitchTrims)
 {
@@ -509,6 +523,9 @@ void accUpdate(timeUs_t currentTimeUs, rollAndPitchTrims_t *rollAndPitchTrims)
     for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
         accumulatedMeasurements[axis] += acc.accADC[axis];
     }
+    
+    calculateMaxThrust();
+
 }
 
 bool accGetAccumulationAverage(float *accumulationAverage)
@@ -549,4 +566,37 @@ void applyAccelerometerTrimsDelta(rollAndPitchTrims_t *rollAndPitchTrimsDelta)
     accelerometerConfigMutable()->accelerometerTrims.values.roll += rollAndPitchTrimsDelta->values.roll;
     accelerometerConfigMutable()->accelerometerTrims.values.pitch += rollAndPitchTrimsDelta->values.pitch;
 }
+
+void calculateMaxThrust(void)
+{
+    /* LOW PASS FILTER ACC[Z] */
+    acc.acc_z_filter[NEW] = acc.acc_z_filter[OLD] + ACC_LOW_PASS_CONSTANT * (acc.accADC[Z] - acc.acc_z_filter[OLD]);
+    acc.acc_z_filter[OLD] = acc.acc_z_filter[NEW];
+
+    /* LOW PASS FILTER THROTTLE */
+    throttleScaled = (rcCommand[THROTTLE] - THROTTLE_RC_MIN);
+    throttleFilter[THROTTLE_NEW] = throttleFilter[THROTTLE_OLD] + THROTTLE_LOW_PASS_CONSTANT * (throttleScaled - throttleFilter[THROTTLE_OLD]);
+    throttleFilter[THROTTLE_OLD] = throttleFilter[THROTTLE_NEW];
+
+    /* THROTTLE POLYNOMIAL */
+    acc.thrust_pred = (P1 * powf(throttleFilter[THROTTLE_NEW], 4) +  
+                   P2 * powf(throttleFilter[THROTTLE_NEW], 3) + 
+                   P3 * powf(throttleFilter[THROTTLE_NEW], 2) + 
+                   P4 * throttleFilter[THROTTLE_NEW] + P5);
+    
+    /* RPM UPDATE */
+    for (int motor = 0; motor < 4; motor++) {
+        acc.rpm[motor] = getDshotTelemetry(motor);
+    }
+    
+    /* RPM TO THRUST */
+    acc.thrust_rpm =  (acc.rpm[0] * acc.rpm[0] +
+                    acc.rpm[1] * acc.rpm[1] +
+                    acc.rpm[2] * acc.rpm[2] +
+                    acc.rpm[3] * acc.rpm[3]) * C_T;
+
+    /* MAX THRUST UPDATE */
+    acc.maxThrust = acc.acc_z_filter[NEW]/acc.thrust_pred;
+}
+
 #endif
