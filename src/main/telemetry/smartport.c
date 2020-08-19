@@ -90,6 +90,13 @@
 // these data identifiers are obtained from https://github.com/opentx/opentx/blob/master/radio/src/telemetry/frsky_hub.h
 enum
 {
+    FSSP_DATAID_MAX_THRUST              = 0x0740 ,
+    FSSP_DATAID_ACC_THROTTLE_MIX        = 0x0741, // acceleration on z axis and throttle in same pkg
+    FSSP_DATAID_ACC_RPM_MIX             = 0x0742, // acceleration on z axis and throttle in same pkg
+    FSSP_DATAID_BF_VERSION              = 0x0743,
+    FSSP_DATAID_THROTTLE                = 0x0744,
+    FSSP_DATAID_ARMING                  = 0x0745,
+
     FSSP_DATAID_SPEED      = 0x0830 ,
     FSSP_DATAID_VFAS       = 0x0210 ,
     FSSP_DATAID_VFAS1      = 0x0211 ,
@@ -134,12 +141,7 @@ enum
     FSSP_DATAID_ACCX       = 0x0700 ,
     FSSP_DATAID_ACCY       = 0x0710 ,
     FSSP_DATAID_ACCZ       = 0x0720 ,
-    FSSP_DATAID_MAX_THRUST = 0x0740 ,
-    FSSP_DATAID_ACC_THROTTLE_MIX    = 0x0750, // acceleration on z axis and throttle in same pkg
-    FSSP_DATAID_ACC_RPM_MIX         = 0x0760, // acceleration on z axis and throttle in same pkg
 #endif
-    FSSP_DATAID_THROTTLE   = 0x0120 ,
-    FSSP_DATAID_ARMING     = 0x0130 ,
     FSSP_DATAID_T1         = 0x0400 ,
     FSSP_DATAID_T11        = 0x0401 ,
     FSSP_DATAID_T2         = 0x0410 ,
@@ -393,25 +395,18 @@ static void initSmartPortSensors(void)
         if (telemetryIsSensorEnabled(SENSOR_ACC_Z)) {
             ADD_SENSOR(FSSP_DATAID_ACCZ);
         }
-        if (telemetryIsSensorEnabled(SENSOR_MAX_THRUST)) {
-            ADD_SENSOR(FSSP_DATAID_MAX_THRUST);
-        }
-        if (telemetryIsSensorEnabled(SENSOR_ACC_THROTTLE_MIX)){
-            ADD_SENSOR(FSSP_DATAID_ACC_THROTTLE_MIX);
-        }
-        if (telemetryIsSensorEnabled(SENSOR_ACC_RPM_MIX)){
-            ADD_SENSOR(FSSP_DATAID_ACC_RPM_MIX);
-        }
     }
 #endif
-
-    if (telemetryIsSensorEnabled(SENSOR_THROTTLE)) {
-        ADD_SENSOR(FSSP_DATAID_THROTTLE);
-    }
     
-    if (telemetryIsSensorEnabled(STATE_ARMING)) {
+    if (telemetryIsSensorEnabled(PATS)) {
+        ADD_SENSOR(FSSP_DATAID_BF_VERSION);
+        ADD_SENSOR(FSSP_DATAID_ACC_RPM_MIX);
+        ADD_SENSOR(FSSP_DATAID_ACC_THROTTLE_MIX);
+        ADD_SENSOR(FSSP_DATAID_MAX_THRUST);
+        ADD_SENSOR(FSSP_DATAID_THROTTLE);
         ADD_SENSOR(FSSP_DATAID_ARMING);
     }
+
     if (sensors(SENSOR_BARO)) {
         if (telemetryIsSensorEnabled(SENSOR_ALTITUDE)) {
             ADD_SENSOR(FSSP_DATAID_ALTITUDE);
@@ -542,10 +537,6 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
     static uint8_t t1Cnt = 0;
     static uint8_t t2Cnt = 0;
     static uint8_t skipRequests = 0;
-
-    /*  local variable for PATS    */
-    uint32_t acc_throttle_mix = 0;
-    uint32_t acc_rpm_mix = 0;
 
 #ifdef USE_ESC_SENSOR_TELEMETRY
     static uint8_t smartPortIdOffset = 0;
@@ -768,18 +759,19 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 smartPortSendPackage(id, lrintf(100 * acc.maxThrust));
                 *clearToSend = false;
                 break;    
-            case FSSP_DATAID_ACC_THROTTLE_MIX :
-                acc_throttle_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
+            case FSSP_DATAID_ACC_THROTTLE_MIX : {
+                uint32_t acc_throttle_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
                 acc_throttle_mix |= (uint16_t)(rcCommand[THROTTLE]);
                 smartPortSendPackage(id, acc_throttle_mix);
                 *clearToSend = false;
                 break; 
-            case FSSP_DATAID_ACC_RPM_MIX :
-                acc_rpm_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
+            } case FSSP_DATAID_ACC_RPM_MIX : {
+                uint32_t acc_rpm_mix = (uint16_t)(100 * acc.accADC[Z] * acc.dev.acc_1G_rec) << 16;
                 acc_rpm_mix |= (uint16_t)(100 * acc.thrust_rpm);
                 smartPortSendPackage(id, acc_rpm_mix);
                 *clearToSend = false;           
-                break;                            
+                break;
+            }
 #endif
             case FSSP_DATAID_THROTTLE   :
                 smartPortSendPackage(id, 1000 * throttleFilter[THROTTLE_NEW]);
@@ -798,6 +790,12 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                     *clearToSend = false;
                 }
                 break;
+            case FSSP_DATAID_BF_VERSION: {
+                uint32_t version = FC_VERSION_PATCH_LEVEL | (FC_VERSION_MINOR << 8) | (FC_VERSION_MAJOR << 16);
+                smartPortSendPackage(id, version);
+                *clearToSend = false;
+                break;
+            }
             case FSSP_DATAID_T1         :
                 // we send all the flags as decimal digits for easy reading
 
