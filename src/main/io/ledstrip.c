@@ -702,7 +702,7 @@ static void applyLedVtxLayer(bool updateNow, timeUs_t *timer)
         }
         hsvColor_t color = ledStripStatusModeConfig()->colors[colorIndex];
         color.v = (vtxStatus & VTX_STATUS_PIT_MODE) ? (blink ? 15 : 0) : 255; // blink when in pit mode
-        //applyLedHsv(LED_MOV_OVERLAY(LED_FLAG_OVERLAY(LED_OVERLAY_VTX)), &color);
+        applyLedHsv(LED_MOV_OVERLAY(LED_FLAG_OVERLAY(LED_OVERLAY_VTX)), &color);
     }
 }
 #endif
@@ -738,7 +738,7 @@ static void applyLedBatteryLayer(bool updateNow, timeUs_t *timer)
 
     if (!flash) {
        const hsvColor_t *bgc = getSC(LED_SCOLOR_BACKGROUND);
-       //applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_BATTERY), bgc);
+       applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_BATTERY), bgc);
     }
 }
 
@@ -767,7 +767,7 @@ static void applyLedRssiLayer(bool updateNow, timeUs_t *timer)
 
     if (!flash) {
         const hsvColor_t *bgc = getSC(LED_SCOLOR_BACKGROUND);
-        //applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_RSSI), bgc);
+        applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_RSSI), bgc);
     }
 }
 
@@ -805,7 +805,7 @@ static void applyLedGpsLayer(bool updateNow, timeUs_t *timer)
         }
     }
 
-    //applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_GPS), gpsColor);
+    applyLedHsv(LED_MOV_FUNCTION(LED_FUNCTION_GPS), gpsColor);
 }
 #endif
 
