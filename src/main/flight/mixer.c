@@ -64,11 +64,18 @@
 
 #include "sensors/battery.h"
 #include "sensors/gyro.h"
+#include "sensors/acceleration.h"
 
 PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 0);
 
 #define DYN_LPF_THROTTLE_STEPS           100
 #define DYN_LPF_THROTTLE_UPDATE_DELAY_US 5000 // minimum of 5ms between updates
+
+const float p1 = 3.0244437204877194e-12;
+const float p2 = -1.370156278354946e-08;
+const float p3 = 2.038567880182629e-05;
+const float p4 = -0.009555491466411848;
+const float p5 = -0.11756082732001538;
 
 PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
     .mixerMode = DEFAULT_MIXER,
@@ -80,6 +87,10 @@ PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
 PG_REGISTER_ARRAY(motorMixer_t, MAX_SUPPORTED_MOTORS, customMotorMixer, PG_MOTOR_MIXER, 0);
 
 #define PWM_RANGE_MID 1500
+
+#define THROTTLE_DELAY 8
+static float throttle_delay_filter[THROTTLE_DELAY];
+static FAST_RAM_ZERO_INIT uint16_t throttle_delay_pointer;
 
 static FAST_RAM_ZERO_INIT uint8_t motorCount;
 static FAST_RAM_ZERO_INIT float motorMixRange;
@@ -376,7 +387,7 @@ void mixerInitProfile(void)
 
 void mixerInit(mixerMode_e mixerMode)
 {
-    pt1FilterInit(&throttleFilterForThrustPrediction, 0.5);
+    pt1FilterInit(&throttleFilterForThrustPrediction, 0.01);
     currentMixerMode = mixerMode;
 
     initEscEndpoints();
@@ -927,26 +938,22 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs, uint8_t vbatPidCompensa
     // reestablish old throttle stick feel by counter compensating thrust linearization
     throttle = pidCompensateThrustLinearization(throttle);
 #endif
-    DEBUG_SET(DEBUG_RPM_FILTER, 0, thrust_estimation_rpm_based);
-    const float p1 = 9.1021e-13;
-    const float p2 = -6.4058e-09;
-    const float p3 = 1.5758e-05;
-    const float p4 = -0.015097;
-    const float p5 = 4.8412;
-
-    float tmp_throttle = 1000 * throttle + 950;
-    tmp_throttle = pt1FilterApply(&throttleFilterForThrustPrediction, tmp_throttle);
-
-    float pred_thrust =  (p1 * sq(sq(tmp_throttle)) + p2 * tmp_throttle * sq(tmp_throttle) + p3 * sq(tmp_throttle) + p4 * tmp_throttle + p5) * 1000;
-    DEBUG_SET(DEBUG_RPM_FILTER, 1, (int) pred_thrust);
-
-    float pred_thrust2 = (p5 + tmp_throttle*(p4 + tmp_throttle*(p3 + tmp_throttle*(p4 + tmp_throttle*p5))))*1000;
-    DEBUG_SET(DEBUG_RPM_FILTER, 2, (int) pred_thrust2);
-
-    pt1FilterApply(&throttleFilterForThrustPrediction, tmp_throttle);
-    DEBUG_SET(DEBUG_RPM_FILTER, 3, tmp_throttle);
-
+    DEBUG_SET(DEBUG_NONE, 0, 1000 * thrust_estimation_rpm_based);
+    float tmp_throttle = 1.0526315789473684e3 * throttle + 947.3684210526316;
+    throttle_delay_filter[throttle_delay_pointer] = tmp_throttle;
+    throttle_delay_pointer = throttle_delay_pointer + 1;
+    throttle_delay_pointer = throttle_delay_pointer % THROTTLE_DELAY;
+    tmp_throttle = throttle_delay_filter[throttle_delay_pointer];
+    //tmp_throttle = pt1FilterApply(&throttleFilterForThrustPrediction, tmp_throttle);
+    float pred_unified_thrust =  (p1 * sq(sq(tmp_throttle)) + p2 * tmp_throttle * sq(tmp_throttle) + p3 * sq(tmp_throttle) + p4 * tmp_throttle + p5);
+    //float pred_thrust2 = (p5 + tmp_throttle*(p4 + tmp_throttle*(p3 + tmp_throttle*(p4 + tmp_throttle*p5))))*1000;
+    DEBUG_SET(DEBUG_NONE, 1, (pred_unified_thrust * 1000));
+    //DEBUG_SET(DEBUG_RPM_FILTER, 2, (accAverage[2] * 9810 / 2048));
+    DEBUG_SET(DEBUG_NONE, 2, 100 * thrust_estimation_rpm_based / pred_unified_thrust);
+    acc.maxThrust = 100 * thrust_estimation_rpm_based / pred_unified_thrust;
+    DEBUG_SET(DEBUG_NONE, 3, tmp_throttle);
 #if defined(USE_THROTTLE_BOOST)
+
     if (throttleBoost > 0.0f) {
         const float throttleHpf = throttle - pt1FilterApply(&throttleLpf, throttle);
         throttle = constrainf(throttle + throttleBoost * throttleHpf, 0.0f, 1.0f);
