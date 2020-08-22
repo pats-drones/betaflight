@@ -1,0 +1,9 @@
+{
+    "configurations": [
+      {
+        "defines": ["STM32F411xE","CRAZYBEEF4FR","USE_TELEMETRY_SMARTPORT","MCU_FLASH_SIZE=512","BAR=100"]
+      }
+    ],
+    "version": 4
+  }
+  

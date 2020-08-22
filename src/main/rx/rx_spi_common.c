@@ -39,6 +39,7 @@ static bool lastBindPinStatus;
 
 void rxSpiCommonIOInit(const rxSpiConfig_t *rxSpiConfig)
 {
+    UNUSED(rxSpiConfig);
     // if (rxSpiConfig->ledIoTag) {
     //     ledPin = IOGetByTag(rxSpiConfig->ledIoTag);
     //     IOInit(ledPin, OWNER_LED, 0);
