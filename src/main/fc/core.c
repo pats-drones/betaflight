@@ -298,7 +298,7 @@ void updateArmingStatus(void)
 
             if (justGotRxBack && IS_RC_MODE_ACTIVE(BOXARM)) {
                 // If the RX has just started to receive a signal again and the arm switch is on, apply arming restriction
-                setArmingDisabled(ARMING_DISABLED_BAD_RX_RECOVERY);
+                // setArmingDisabled(ARMING_DISABLED_BAD_RX_RECOVERY);
             } else if (haveRx && !IS_RC_MODE_ACTIVE(BOXARM)) {
                 // If RX signal is OK and the arm switch is off, remove arming restriction
                 unsetArmingDisabled(ARMING_DISABLED_BAD_RX_RECOVERY);
