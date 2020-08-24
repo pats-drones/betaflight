@@ -552,7 +552,7 @@ void accUpdate(timeUs_t currentTimeUs, rollAndPitchTrims_t *rollAndPitchTrims)
         accumulatedMeasurements[axis] += acc.accADC[axis];
     }
     
-    calculateMaxThrust();
+    //calculateMaxThrust();
 
 }
 
