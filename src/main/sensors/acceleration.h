@@ -25,6 +25,8 @@
 #include "drivers/accgyro/accgyro.h"
 #include "sensors/sensors.h"
 
+#define INIT_MAX_THRUST 30
+
 // Type of accelerometer used/detected
 typedef enum {
     ACC_DEFAULT,
