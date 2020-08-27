@@ -96,10 +96,6 @@ PG_REGISTER_ARRAY(motorMixer_t, MAX_SUPPORTED_MOTORS, customMotorMixer, PG_MOTOR
 
 #define PWM_RANGE_MID 1500
 
-#define THROTTLE_DELAY 8
-static float throttle_delay_filter[THROTTLE_DELAY];
-static FAST_RAM_ZERO_INIT uint16_t throttle_delay_pointer;
-
 static FAST_RAM_ZERO_INIT uint8_t motorCount;
 static FAST_RAM_ZERO_INIT float motorMixRange;
 
@@ -952,10 +948,6 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs, uint8_t vbatPidCompensa
 #endif
     DEBUG_SET(DEBUG_RPM_FILTER, 0, 1000 * thrust_estimation_rpm_based);
     float tmp_throttle = 1.0526315789473684e3 * throttle + 947.3684210526316;
-    throttle_delay_filter[throttle_delay_pointer] = tmp_throttle;
-    throttle_delay_pointer = throttle_delay_pointer + 1;
-    throttle_delay_pointer = throttle_delay_pointer % THROTTLE_DELAY;
-    tmp_throttle = throttle_delay_filter[throttle_delay_pointer];
     tmp_throttle = pt1FilterApply(&throttleFilterForThrustPrediction, tmp_throttle);
 
     float tmp_maxthrust;
