@@ -71,19 +71,16 @@ PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 0);
 #define DYN_LPF_THROTTLE_STEPS           100
 #define DYN_LPF_THROTTLE_UPDATE_DELAY_US 5000 // minimum of 5ms between updates
 
-//const float p1 = 3.0244437204877194e-12;
-//const float p2 = -1.370156278354946e-08;
-//const float p3 = 2.038567880182629e-05;
-//const float p4 = -0.009555491466411848;
-//const float p5 = -0.11756082732001538;
-const float p1 = 9.1021e-13;
-const float p2 = -6.4058e-09;
-const float p3 = 1.5758e-05;
-const float p4 = -0.015097;
-const float p5 = 4.8412;
+const float p1 = 2.3204149468415615e-15;
+const float p2 = -3.531049242822865e-11;
+const float p3 = 1.560600299132543e-07;
+const float p4 = -1.0957834017543753e-05;
+const float p5 = -0.029014207929619028;
 
 pt1Filter_t maxthrust_filter1; // Use two (already implemented) pt1 filter two build a pt2
 pt1Filter_t maxthrust_filter2;
+
+float motorThrottle[MAX_SUPPORTED_MOTORS];
 
 PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
     .mixerMode = DEFAULT_MIXER,
@@ -395,7 +392,7 @@ void mixerInit(mixerMode_e mixerMode)
     maxthrust_filter1.state = INIT_MAX_THRUST*100;
     pt1FilterInit(&maxthrust_filter2, 0.002);
     maxthrust_filter2.state = INIT_MAX_THRUST*100;
-    pt1FilterInit(&throttleFilterForThrustPrediction, 0.05);
+    pt1FilterInit(&throttleFilterForThrustPrediction, 0.002125);
     currentMixerMode = mixerMode;
 
     initEscEndpoints();
@@ -796,6 +793,7 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
             motorOutput = constrain(motorOutput, motorRangeMin, motorRangeMax);
         }
         motor[i] = motorOutput;
+        motorThrottle[i] = motorOutput;
     }
 
     // Disarmed mode
@@ -946,34 +944,6 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs, uint8_t vbatPidCompensa
     // reestablish old throttle stick feel by counter compensating thrust linearization
     throttle = pidCompensateThrustLinearization(throttle);
 #endif
-    DEBUG_SET(DEBUG_RPM_FILTER, 0, 1000 * thrust_estimation_rpm_based);
-    float tmp_throttle = 1.0526315789473684e3 * throttle + 947.3684210526316;
-    tmp_throttle = pt1FilterApply(&throttleFilterForThrustPrediction, tmp_throttle);
-
-    float tmp_maxthrust;
-    float pred_unified_thrust =  (p1 * sq(sq(tmp_throttle)) + p2 * tmp_throttle * sq(tmp_throttle) + p3 * sq(tmp_throttle) + p4 * tmp_throttle + p5);
-    //float pred_thrust2 = (p5 + tmp_throttle*(p4 + tmp_throttle*(p3 + tmp_throttle*(p4 + tmp_throttle*p5))))*1000;
-    DEBUG_SET(DEBUG_RPM_FILTER, 1, (pred_unified_thrust * 1000));
-
-
-    if(tmp_throttle>1100 && thrust_estimation_rpm_based>0)
-    {
-        tmp_maxthrust = 100 * thrust_estimation_rpm_based / pred_unified_thrust;
-        if(tmp_maxthrust<1000)
-        {
-            tmp_maxthrust = acc.maxThrust;
-        }
-    }
-    else
-    {
-        tmp_maxthrust = acc.maxThrust;
-    }
-    DEBUG_SET(DEBUG_RPM_FILTER, 2, tmp_maxthrust);
-    float tmp_maxthrust1 = pt1FilterApply(&maxthrust_filter1, tmp_maxthrust);
-    float tmp_maxthrust2 = pt1FilterApply(&maxthrust_filter2, tmp_maxthrust1);
-    acc.maxThrust = tmp_maxthrust2;
-    DEBUG_SET(DEBUG_RPM_FILTER, 3, acc.maxThrust);
-
 #if defined(USE_THROTTLE_BOOST)
 
     if (throttleBoost > 0.0f)
@@ -1032,6 +1002,7 @@ FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs, uint8_t vbatPidCompensa
         // Apply the mix to motor endpoints
         applyMixToMotors(motorMix, activeMixer);
     }
+    maxThrustEstimation();
 }
 
 void mixerSetThrottleAngleCorrection(int correctionValue)
@@ -1064,4 +1035,39 @@ bool isFixedWing(void)
 
         break;
     }
+}
+
+// PATS-CODE:
+void maxThrustEstimation(void)
+{
+    DEBUG_SET(DEBUG_RPM_FILTER, 0, 1000 * thrust_estimation_rpm_based);
+
+    float motorsThrottle = 0;
+    for(int i = 0; i<motorCount; i++)
+    {
+       motorsThrottle = motorsThrottle + motorThrottle[i];
+    }
+    motorsThrottle = pt1FilterApply(&throttleFilterForThrustPrediction, motorsThrottle);
+    float pred_unified_thrust =  (p1 * sq(sq(motorsThrottle)) + p2 * motorsThrottle * sq(motorsThrottle) + p3 * sq(motorsThrottle) + p4 * motorsThrottle + p5);
+    DEBUG_SET(DEBUG_RPM_FILTER, 1, (pred_unified_thrust * 1000));
+
+
+    if(tmp_throttle>1100 && thrust_estimation_rpm_based>0)
+    {
+        tmp_maxthrust = 100 * thrust_estimation_rpm_based / pred_unified_thrust;
+        if(tmp_maxthrust<1000)
+        {
+            tmp_maxthrust = acc.maxThrust;
+        }
+    }
+    else
+    {
+        tmp_maxthrust = acc.maxThrust;
+    }
+    DEBUG_SET(DEBUG_RPM_FILTER, 2, tmp_maxthrust);
+    float tmp_maxthrust1 = pt1FilterApply(&maxthrust_filter1, tmp_maxthrust);
+    float tmp_maxthrust2 = pt1FilterApply(&maxthrust_filter2, tmp_maxthrust1);
+    acc.maxThrust = tmp_maxthrust2;
+
+    DEBUG_SET(DEBUG_RPM_FILTER, 3, motorsThrottle);
 }
