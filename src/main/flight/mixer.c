@@ -1052,7 +1052,8 @@ void maxThrustEstimation(void)
     DEBUG_SET(DEBUG_RPM_FILTER, 1, (pred_unified_thrust * 1000));
 
 
-    if(tmp_throttle>1100 && thrust_estimation_rpm_based>0)
+    float tmp_maxthrust;
+    if(pred_unified_thrust>0.02 && thrust_estimation_rpm_based>0)
     {
         tmp_maxthrust = 100 * thrust_estimation_rpm_based / pred_unified_thrust;
         if(tmp_maxthrust<1000)
