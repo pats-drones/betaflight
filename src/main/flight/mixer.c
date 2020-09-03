@@ -1058,7 +1058,7 @@ void maxThrustEstimation(void)
 
 
     float tmp_maxthrust;
-    if(pred_unified_thrust>0.15 && thrust_estimation_rpm_based>0)
+    if(pred_unified_thrust>0.1 && thrust_estimation_rpm_based>0)
     {
         tmp_maxthrust = 100 * thrust_estimation_rpm_based / pred_unified_thrust;
         if(tmp_maxthrust<1000)
