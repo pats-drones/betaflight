@@ -79,8 +79,8 @@ FAST_RAM_ZERO_INIT static uint8_t currentHarmonic;
 FAST_RAM_ZERO_INIT static uint8_t currentFilterNumber;
 FAST_RAM static rpmNotchFilter_t* currentFilter = &filters[0];
 
-pt1Filter_t thrust_estimation_rpm_based_filter;
-float thrust_estimation_rpm_based = 0;
+pt1Filter_t thrust_estimation_rpm_based_filters[MAX_SUPPORTED_MOTORS];
+float thrust_estimation_rpm_based[4] = {0};
 
 
 PG_REGISTER_WITH_RESET_FN(rpmFilterConfig_t, rpmFilterConfig, PG_RPM_FILTER_CONFIG, 3);
@@ -156,7 +156,9 @@ void rpmFilterInit(const rpmFilterConfig_t *config)
     numberFilters = getMotorCount() * (filters[0].harmonics + filters[1].harmonics);
     const float filtersPerLoopIteration = numberFilters / loopIterationsPerUpdate;
     filterUpdatesPerIteration = rintf(filtersPerLoopIteration + 0.49f);
-    pt1FilterInit(&thrust_estimation_rpm_based_filter, 0.01);
+    for(int i=0; i< MAX_SUPPORTED_MOTORS; i++) {
+        pt1FilterInit(&thrust_estimation_rpm_based_filters[i], 0.01);
+    }
 }
 
 static float applyFilter(rpmNotchFilter_t* filter, int axis, float value)
@@ -197,10 +199,10 @@ FAST_CODE_NOINLINE void rpmFilterUpdate()
         //if (motor < 4) {
         //DEBUG_SET(DEBUG_RPM_FILTER, motor, motorFrequency[motor]);
         //}
-        acc_z_rpm = acc_z_rpm + 0.000018652 * sq(erpmToHz * filteredMotorErpm[motor]);
+        acc_z_rpm = 0.000018652 * sq(erpmToHz * filteredMotorErpm[motor]);
+        thrust_estimation_rpm_based[motor] = pt1FilterApply(&thrust_estimation_rpm_based_filters[motor], acc_z_rpm);
     }
 
-    thrust_estimation_rpm_based = pt1FilterApply(&thrust_estimation_rpm_based_filter, acc_z_rpm);
     for (int i = 0; i < filterUpdatesPerIteration; i++) {
         float frequency = constrainf(
             (currentHarmonic + 1) * motorFrequency[currentMotor], currentFilter->minHz, currentFilter->maxHz);

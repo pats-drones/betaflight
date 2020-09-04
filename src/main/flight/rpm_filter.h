@@ -44,5 +44,4 @@ float rpmFilterDterm(int axis, float values);
 void  rpmFilterUpdate();
 bool isRpmFilterEnabled(void);
 float rpmMinMotorFrequency();
-extern float thrust_estimation_rpm_based;
-
+extern float thrust_estimation_rpm_based[];
