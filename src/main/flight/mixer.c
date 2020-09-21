@@ -403,7 +403,7 @@ void mixerInit(mixerMode_e mixerMode)
     pt1FilterInit(&maxthrust_filter2, 0.0005);
     maxthrust_filter2.state = INIT_MAX_THRUST*100;
 
-    pt1FilterInit(&accelZFilter, pt1FilterGain(90, 1.f/4000));
+    pt1FilterInit(&accelZFilter, pt1FilterGain(1.2, 1.f/4000));
     currentMixerMode = mixerMode;
 
     initEscEndpoints();
@@ -1067,13 +1067,16 @@ void maxThrustEstimation(void)
     motorsThrottle = pt1FilterApply(&motorsthrottleFilterForThrustPrediction2, motorsThrottle);
     //DEBUG_SET(DEBUG_RPM_FILTER, 1, motorsThrottle);
 
+    float accelZfilt = pt1FilterApply(&accelZFilter, acc.accADC[Z]);
+
     float pred_unified_thrust =  (p1 * sq(sq(motorsThrottle)) + p2 * motorsThrottle * sq(motorsThrottle) + p3 * sq(motorsThrottle) + p4 * motorsThrottle + p5);
+    DEBUG_SET(DEBUG_RPM_FILTER, 0, 1000 * pred_unified_thrust);
     DEBUG_SET(DEBUG_RPM_FILTER, 1, 1000 * thrust_estimation_rpm_based)
 
     float tmp_maxthrust;
-    if(pred_unified_thrust>0.1 && thrust_estimation_rpm_based>0)
+    if(pred_unified_thrust>0.1)
     {
-        tmp_maxthrust = 100 * thrust_estimation_rpm_based / pred_unified_thrust;
+        tmp_maxthrust = 100 * accelZfilt / pred_unified_thrust;
         if(tmp_maxthrust<1000)
         {
             tmp_maxthrust = acc.maxThrust;
@@ -1084,11 +1087,10 @@ void maxThrustEstimation(void)
         tmp_maxthrust = acc.maxThrust;
     }
 
+    DEBUG_SET(DEBUG_RPM_FILTER, 2, 10*accelZfilt);
     float tmp_maxthrust1 = pt1FilterApply(&maxthrust_filter1, tmp_maxthrust);
     float tmp_maxthrust2 = pt1FilterApply(&maxthrust_filter2, tmp_maxthrust1);
     acc.maxThrust = tmp_maxthrust2;
 
-    float accelZfilt = pt1FilterApply(&accelZFilter, acc.accADC[Z]);
-    DEBUG_SET(DEBUG_RPM_FILTER, 2, 10*acc.accADC[Z]);
-    DEBUG_SET(DEBUG_RPM_FILTER, 3, 10*accelZfilt);
+    DEBUG_SET(DEBUG_RPM_FILTER, 3, tmp_maxthrust2);
 }
