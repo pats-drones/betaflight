@@ -393,7 +393,6 @@ bool accInit(uint16_t accSampleRateHz)
     acc.dev.acc_1G_rec = 1.0f / acc.dev.acc_1G;
 
     acc.sampleRateHz = accSampleRateHz;
-    acc.maxThrust = INIT_MAX_THRUST;
     accInitFilters();
     return true;
 }
