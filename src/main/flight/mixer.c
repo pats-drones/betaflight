@@ -403,7 +403,7 @@ void mixerInit(mixerMode_e mixerMode)
     pt1FilterInit(&maxthrust_filter2, 0.0005);
     maxthrust_filter2.state = INIT_MAX_THRUST*100;
 
-    pt1FilterInit(&accelZFilter, pt1FilterGain(1.2, 1.f/4000));
+    pt1FilterInit(&accelZFilter, pt1FilterGain(1, 1.f/4000));
     currentMixerMode = mixerMode;
 
     initEscEndpoints();
@@ -1073,10 +1073,11 @@ void maxThrustEstimation(void)
     DEBUG_SET(DEBUG_RPM_FILTER, 0, 1000 * pred_unified_thrust);
     DEBUG_SET(DEBUG_RPM_FILTER, 1, 1000 * thrust_estimation_rpm_based)
 
-    float tmp_maxthrust;
+        float tmp_maxthrust;
+    float accelZfiltf = accelZfilt/2048*9.81;
     if(pred_unified_thrust>0.1)
     {
-        tmp_maxthrust = 100 * accelZfilt / pred_unified_thrust;
+        tmp_maxthrust = 100 * accelZfiltf / pred_unified_thrust;
         if(tmp_maxthrust<1000)
         {
             tmp_maxthrust = acc.maxThrust;
