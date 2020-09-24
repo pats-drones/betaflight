@@ -1074,21 +1074,22 @@ void maxThrustEstimation(void)
     DEBUG_SET(DEBUG_RPM_FILTER, 0, 1000 * pred_unified_thrust);
     DEBUG_SET(DEBUG_RPM_FILTER, 1, 1000 * thrust_estimation_rpm_based)
 
-        float tmp_maxthrust;
+    float tmp_maxthrust;
     float accelZfiltf = accelZfilt/2048*9.81;
     if(pred_unified_thrust>0.1)
     {
         tmp_maxthrust = 100.f * accelZfiltf / pred_unified_thrust;
-        if(tmp_maxthrust<1000.f && tmp_maxthrust>3500.f)
+
+        if(tmp_maxthrust>1000.f && tmp_maxthrust<3500.f)
         {
-            tmp_maxthrust = acc.maxThrust;
-        }
-        else {
             if(maxthrust_inited==0) {
                 maxthrust_inited = 1;
                 maxthrust_filter1.state = tmp_maxthrust;
                 maxthrust_filter2.state = tmp_maxthrust;
             }
+        }
+        else {
+            tmp_maxthrust = acc.maxThrust;
         }
     }
     else
