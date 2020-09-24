@@ -79,6 +79,7 @@ const float p5 = -0.029014207929619028;
 
 pt1Filter_t maxthrust_filter1; // Use two (already implemented) pt1 filter two build a pt2
 pt1Filter_t maxthrust_filter2;
+uint8_t maxthrust_inited = 0;
 
 float motorThrottle[MAX_SUPPORTED_MOTORS];
 pt1Filter_t throttleFilterForThrustPrediction1;
@@ -1077,15 +1078,22 @@ void maxThrustEstimation(void)
     float accelZfiltf = accelZfilt/2048*9.81;
     if(pred_unified_thrust>0.1)
     {
-        tmp_maxthrust = 100 * accelZfiltf / pred_unified_thrust;
-        if(tmp_maxthrust<1000)
+        tmp_maxthrust = 100.f * accelZfiltf / pred_unified_thrust;
+        if(tmp_maxthrust<1000.f && tmp_maxthrust>3500.f)
         {
             tmp_maxthrust = acc.maxThrust;
+        }
+        else {
+            if(maxthrust_inited==0) {
+                maxthrust_inited = 1;
+                maxthrust_filter1.state = tmp_maxthrust;
+                maxthrust_filter2.state = tmp_maxthrust;
+            }
         }
     }
     else
     {
-        tmp_maxthrust = acc.maxThrust;
+        tmp_maxthrust = maxthrust_filter2.state;
     }
 
     DEBUG_SET(DEBUG_RPM_FILTER, 2, 10*accelZfilt);
