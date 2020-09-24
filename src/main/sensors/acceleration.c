@@ -614,7 +614,7 @@ void calculateMaxThrust(void)
                     acc.rpm[3] * acc.rpm[3]) * C_T;
 
     /* MAX THRUST UPDATE */
-    acc.maxThrust = acc.acc_z_filter[NEW]/acc.thrust_pred;
+    //acc.maxThrust = acc.acc_z_filter[NEW]/acc.thrust_pred;
 }
 
 #endif
