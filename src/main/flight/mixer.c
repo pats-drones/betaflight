@@ -399,9 +399,9 @@ void mixerInit(mixerMode_e mixerMode)
     pt1FilterInit(&motorsthrottleFilterForThrustPrediction1, 0.005);
     pt1FilterInit(&motorsthrottleFilterForThrustPrediction2, 0.00375);
 
-    pt1FilterInit(&maxthrust_filter1, 0.00075);
+    pt1FilterInit(&maxthrust_filter1, 0.0005);
     maxthrust_filter1.state = INIT_MAX_THRUST*100;
-    pt1FilterInit(&maxthrust_filter2, 0.0005);
+    pt1FilterInit(&maxthrust_filter2, 0.00035);
     maxthrust_filter2.state = INIT_MAX_THRUST*100;
 
     pt1FilterInit(&accelZFilter, pt1FilterGain(1, 1.f/4000));
@@ -1055,7 +1055,6 @@ void maxThrustEstimation(void)
     float tmp_throttle = 1.0526315789473684e3 * throttle + 947.3684210526316;
     tmp_throttle = pt1FilterApply(&throttleFilterForThrustPrediction1, tmp_throttle);
     tmp_throttle = pt1FilterApply(&throttleFilterForThrustPrediction2, tmp_throttle);
-    DEBUG_SET(DEBUG_RPM_FILTER, 0, tmp_throttle);
 
     float motorsThrottle = 0;
     for(int i = 0; i<motorCount; i++)
@@ -1071,18 +1070,17 @@ void maxThrustEstimation(void)
     float accelZfilt = pt1FilterApply(&accelZFilter, acc.accADC[Z]);
 
     float pred_unified_thrust =  (p1 * sq(sq(motorsThrottle)) + p2 * motorsThrottle * sq(motorsThrottle) + p3 * sq(motorsThrottle) + p4 * motorsThrottle + p5);
-    DEBUG_SET(DEBUG_RPM_FILTER, 0, 1000 * pred_unified_thrust);
-    DEBUG_SET(DEBUG_RPM_FILTER, 1, 1000 * thrust_estimation_rpm_based)
 
     float tmp_maxthrust;
     float accelZfiltf = accelZfilt/2048*9.81;
+    DEBUG_SET(DEBUG_RPM_FILTER, 0, 10 * accelZfiltf);
     if(pred_unified_thrust>0.1)
     {
-        tmp_maxthrust = 100.f * accelZfiltf / pred_unified_thrust;
+        tmp_maxthrust = 100 * accelZfiltf / pred_unified_thrust;
 
-        if(tmp_maxthrust>1000.f && tmp_maxthrust<3500.f)
+        if(tmp_maxthrust>1000.f && tmp_maxthrust<6500.f)
         {
-            if(maxthrust_inited==0) {
+            if(maxthrust_inited==0 && tmp_maxthrust<4000.f) {
                 maxthrust_inited = 1;
                 maxthrust_filter1.state = tmp_maxthrust;
                 maxthrust_filter2.state = tmp_maxthrust;
@@ -1094,13 +1092,14 @@ void maxThrustEstimation(void)
     }
     else
     {
-        tmp_maxthrust = maxthrust_filter2.state;
+        tmp_maxthrust = acc.maxThrust;
     }
 
-    DEBUG_SET(DEBUG_RPM_FILTER, 2, 10*accelZfilt);
+    DEBUG_SET(DEBUG_RPM_FILTER, 1, tmp_maxthrust)
     float tmp_maxthrust1 = pt1FilterApply(&maxthrust_filter1, tmp_maxthrust);
     float tmp_maxthrust2 = pt1FilterApply(&maxthrust_filter2, tmp_maxthrust1);
     acc.maxThrust = tmp_maxthrust2;
 
+    DEBUG_SET(DEBUG_RPM_FILTER, 2, tmp_maxthrust1);
     DEBUG_SET(DEBUG_RPM_FILTER, 3, tmp_maxthrust2);
 }
