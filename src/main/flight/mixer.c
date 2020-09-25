@@ -71,11 +71,11 @@ PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 0);
 #define DYN_LPF_THROTTLE_STEPS           100
 #define DYN_LPF_THROTTLE_UPDATE_DELAY_US 5000 // minimum of 5ms between updates
 
-const float p1 = 2.3204149468415615e-15;
-const float p2 = -3.531049242822865e-11;
-const float p3 = 1.560600299132543e-07;
-const float p4 = -1.0957834017543753e-05;
-const float p5 = -0.029014207929619028;
+const float p1 = 2.985010579176831e-17;
+const float p2 = -3.38686357111281e-12;
+const float p3 = 2.243787409206082e-08;
+const float p4 = 0.00016068316590230376;
+const float p5 = -0.13381375144387142;
 
 pt1Filter_t maxthrust_filter1; // Use two (already implemented) pt1 filter two build a pt2
 pt1Filter_t maxthrust_filter2;
