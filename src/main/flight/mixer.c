@@ -64,6 +64,7 @@
 
 #include "sensors/battery.h"
 #include "sensors/gyro.h"
+#include "sensors/acceleration.h"
 
 PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 0);
 
@@ -774,7 +775,9 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
         } else {
             motorOutput = constrain(motorOutput, motorRangeMin, motorRangeMax);
         }
-        motor[i] = motorOutput;
+        float motorsupport = spinup_support(i);
+        DEBUG_SET(DEBUG_RPM_FILTER, i, acc.rpm[i]);
+        motor[i] = motorOutput + motorsupport;
     }
 
     // Disarmed mode
@@ -1014,4 +1017,19 @@ bool isFixedWing(void)
 
         break;
     }
+}
+
+float spinup_support(int motor) {
+    float min_rpm = 350;
+    // CHECK IF RPM IS LOW:
+    if(acc.rpm[motor] > min_rpm)
+        return 0.;
+
+    // IDENTIFY THE SITUATION IN WHICH THE DRONE IS STANDING ON THE CHARGING-PAD AND SPINNING UP:
+    float norm_throttle = 1.0526315789473684e3 * throttle + 947.3684210526316;
+    uint8_t accel_ok = fabsf(acc.accADC[0])<200 && fabsf(acc.accADC[1])<200 && acc.accADC[2]<2248 && acc.accADC[2]>1848;
+    if(!accel_ok || !(norm_throttle<1012))
+        return 0.;
+
+    return (min_rpm - acc.rpm[motor]) / 350 * 200;
 }
