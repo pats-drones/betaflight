@@ -1015,3 +1015,20 @@ bool isFixedWing(void)
         break;
     }
 }
+
+void lowRPMalarm(void){
+    int slowengine;
+
+    while (norm_throttle < 1340) 
+    {
+        int i;
+        for (i = 0; i < 4; ++i) {
+            if(filteredMotorErpm[i]< 200){
+            slowengine = slowengine + pow(2,i);
+        }
+
+    }   
+    }
+    
+
+}
