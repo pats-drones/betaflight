@@ -116,3 +116,4 @@ void mixerSetThrottleAngleCorrection(int correctionValue);
 float mixerGetThrottle(void);
 mixerMode_e getMixerMode(void);
 bool isFixedWing(void);
+int lowRPMalarm(void);

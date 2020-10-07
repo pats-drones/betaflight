@@ -64,6 +64,7 @@
 
 #include "sensors/battery.h"
 #include "sensors/gyro.h"
+#include "sensors/acceleration.h"
 
 PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 0);
 
@@ -774,6 +775,12 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
         } else {
             motorOutput = constrain(motorOutput, motorRangeMin, motorRangeMax);
         }
+
+        if(i==0) {
+            DEBUG_SET(DEBUG_RPM_FILTER, i, lowRPMalarm());
+        } else {
+            DEBUG_SET(DEBUG_RPM_FILTER, i, acc.rpm[i]);
+        }
         motor[i] = motorOutput;
     }
 
@@ -1016,19 +1023,17 @@ bool isFixedWing(void)
     }
 }
 
-void lowRPMalarm(void){
-    int slowengine;
+// PATS-CODE:
+int lowRPMalarm(void){
+    int slowengine = 0;
+    float norm_throttle = 1.0526315789473684e3 * throttle + 947.3684210526316;
 
-    while (norm_throttle < 1340) 
-    {
-        int i;
-        for (i = 0; i < 4; ++i) {
-            if(filteredMotorErpm[i]< 200){
-            slowengine = slowengine + pow(2,i);
+    if (norm_throttle < 1340) {
+        for (int i = 0; i < 4; ++i) {
+            if(acc.rpm[i] < 200){
+                slowengine = slowengine + pow(2,i);
+            }
         }
-
-    }   
     }
-    
-
+    return slowengine;
 }
