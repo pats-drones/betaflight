@@ -94,6 +94,7 @@ enum
     FSSP_DATAID_ACC_THROTTLE_MIX        = 0x0741, // acceleration on z axis and throttle in same pkg
     FSSP_DATAID_ACC_RPM_MIX             = 0x0742, // acceleration on z axis and throttle in same pkg
     FSSP_DATAID_BF_VERSION              = 0x0743,
+    FSSP_DATAID_BF_UID                  = 0x0744,
     FSSP_DATAID_ARMING                  = 0x0745,
 
     FSSP_DATAID_SPEED      = 0x0830 ,
@@ -399,6 +400,7 @@ static void initSmartPortSensors(void)
     
     if (telemetryIsSensorEnabled(PATS)) {
         ADD_SENSOR(FSSP_DATAID_BF_VERSION);
+        ADD_SENSOR(FSSP_DATAID_BF_UID);
         ADD_SENSOR(FSSP_DATAID_ACC_RPM_MIX);
         ADD_SENSOR(FSSP_DATAID_ACC_THROTTLE_MIX);
         ADD_SENSOR(FSSP_DATAID_MAX_THRUST);
@@ -779,6 +781,12 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
             case FSSP_DATAID_BF_VERSION: {
                 uint32_t version = FC_VERSION_PATCH_LEVEL | (FC_VERSION_MINOR << 8) | (FC_VERSION_MAJOR << 16);
                 smartPortSendPackage(id, version);
+                *clearToSend = false;
+                break;
+            }
+            case FSSP_DATAID_BF_UID: {
+                uint32_t * uid = (uint32_t *)pilotConfig()->name;
+                smartPortSendPackage(id, *uid);
                 *clearToSend = false;
                 break;
             }
