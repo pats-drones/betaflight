@@ -779,9 +779,27 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
 
     // Disarmed mode
     if (!ARMING_FLAG(ARMED)) {
-        for (int i = 0; i < motorCount; i++) {
-            motor[i] = motor_disarmed[i];
-        }
+        // for (int i = 0; i < motorCount; i++) {
+        //     motor[i] = motor_disarmed[i];
+        // }
+    }
+
+    static unsigned long utime;
+    utime += 1000;
+
+    unsigned long time = utime / 1000;
+
+    int period = 10000;
+    int max_throttle = 800;
+    int ramp_up_time = 6000;
+
+    for (int i = 0; i < motorCount; i++) {
+        int t = (time+period / 4 * i) % period;
+
+        if (t < ramp_up_time)
+            motor[i] = max_throttle * t / ramp_up_time;
+        else
+            motor[i] = 0;
     }
 }
 
