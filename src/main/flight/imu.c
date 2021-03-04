@@ -52,6 +52,7 @@
 #include "sensors/gyro.h"
 #include "sensors/sensors.h"
 
+
 #if defined(SIMULATOR_BUILD) && defined(SIMULATOR_MULTITHREAD)
 #include <stdio.h>
 #include <pthread.h>
@@ -151,6 +152,10 @@ STATIC_UNIT_TESTED void imuComputeRotationMatrix(void){
     rMat[2][0] = 2.0f * (qP.xz + -qP.wy);
     rMat[2][1] = 2.0f * (qP.yz - -qP.wx);
     rMat[2][2] = 1.0f - 2.0f * qP.xx - 2.0f * qP.yy;
+
+
+  
+
 
 #if defined(SIMULATOR_BUILD) && !defined(USE_IMU_CALC) && !defined(SET_IMU_FROM_EULER)
     rMat[1][0] = -2.0f * (qP.xy - -qP.wz);
@@ -810,4 +815,11 @@ bool isUpright(void)
 #else
     return true;
 #endif
+}
+
+
+
+float isupsidedown(void){
+    imuComputeRotationMatrix();
+    return rMat[2][2];
 }

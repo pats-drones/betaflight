@@ -65,6 +65,8 @@
 #include "sensors/battery.h"
 #include "sensors/gyro.h"
 
+#include "safetydroneflip/safetydroneflip.h"
+
 PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 0);
 
 #define DYN_LPF_THROTTLE_STEPS           100
@@ -779,10 +781,12 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
 
     // Disarmed mode
     if (!ARMING_FLAG(ARMED)) {
-        for (int i = 0; i < motorCount; i++) {
-            motor[i] = motor_disarmed[i];
-        }
+         for (int i = 0; i < motorCount; i++) {
+             motor[i] = motor_disarmed[i];
+         }
     }
+   
+    safetydroneflipMain();    
 }
 
 static float applyThrottleLimit(float throttle)
