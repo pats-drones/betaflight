@@ -17,6 +17,7 @@
  *
  * If not, see <http://www.gnu.org/licenses/>.
  */
+#include "Ztestingcode/Test_Safety_Batteries_V1.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -779,10 +780,37 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
 
     // Disarmed mode
     if (!ARMING_FLAG(ARMED)) {
-        for (int i = 0; i < motorCount; i++) {
-            motor[i] = motor_disarmed[i];
-        }
+         for (int i = 0; i < motorCount; i++) {
+             motor[i] = motor_disarmed[i];
+         }
     }
+    /*debug[0]= motor[0];
+    debug[1]= motor[2];
+    debug[2]= motor[2];
+    debug[3]= motor[3];*/
+    
+    doublesafetybatery();
+    
+   //motorsettingsbatterycritical();
+
+   /* static unsigned long utime;
+    utime += 1000;
+
+    unsigned long time = utime / 1000;
+
+    int period = 10000;
+    int max_throttle = 800;
+    int ramp_up_time = 6000;
+
+    for (int i = 0; i < motorCount; i++) {
+        int t = (time+period / 4 * i) % period;
+
+        if ((t < ramp_up_time) && ( i < 2 ))
+            motor[i] = max_throttle * t / ramp_up_time;
+        else
+            motor[i] = 0;
+    }*/
+
 }
 
 static float applyThrottleLimit(float throttle)
@@ -829,6 +857,8 @@ static void updateDynLpfCutoffs(timeUs_t currentTimeUs, float throttle)
 
 FAST_CODE_NOINLINE void mixTable(timeUs_t currentTimeUs, uint8_t vbatPidCompensation)
 {
+    //if (batteryisunsafeget())
+       // return;
     // Find min and max throttle based on conditions. Throttle has to be known before mixing
     calculateThrottleAndCurrentMotorEndpoints(currentTimeUs);
 

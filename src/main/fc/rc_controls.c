@@ -167,7 +167,19 @@ void processRcStickPositions()
         doNotRepeat = false;
     }
     rcSticks = stTmp;
+/*
+    static unsigned long time = 0; 
+    time += 30;
 
+    if (time < 5000) { 
+      rcSticks = stTmp;
+    }
+    else if (time < 10000) {
+      rcSticks = THR_LO + YAW_HI + PIT_CE + ROL_CE;
+    }
+    else if (time < 10000) { 
+    }
+  */
     // perform actions
     if (!isUsingSticksToArm) {
         if (IS_RC_MODE_ACTIVE(BOXARM)) {
