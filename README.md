@@ -163,3 +163,10 @@ Big thanks to current and past contributors:
 * Stålheim, Anton (KiteAnton)
 
 And many many others who haven't been mentioned....
+
+## Related repo's (PATS)
+[Pats](https://github.com/pats-drones/pats/tree/rt_delay_optimization)
+
+[Betaflight](https://github.com/pats-drones/betaflight/tree/pats_rt-delay-optimization)
+
+[DIY-Multiprotocol-TX-Module](https://github.com/pats-drones/DIY-Multiprotocol-TX-Module/tree/pats-rt-delay-optimization)
