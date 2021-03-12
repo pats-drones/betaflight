@@ -296,7 +296,6 @@ static FAST_RAM_ZERO_INIT pt1Filter_t windupLpf[XYZ_AXIS_COUNT];
 static FAST_RAM_ZERO_INIT uint8_t itermRelax;
 static FAST_RAM_ZERO_INIT uint8_t itermRelaxType;
 static uint8_t itermRelaxCutoff;
-static FAST_RAM_ZERO_INIT float itermRelaxSetpointThreshold;
 #endif
 
 #if defined(USE_ABSOLUTE_CONTROL)
