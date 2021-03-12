@@ -87,6 +87,11 @@
 // these data identifiers are obtained from https://github.com/opentx/opentx/blob/master/radio/src/telemetry/frsky_hub.h
 enum
 {
+    FSSP_DATAID_BF_VERSION              = 0x0743,
+    FSSP_DATAID_BF_UID                  = 0x0744,
+    FSSP_DATAID_ARMING                  = 0x0745,
+    FSSP_DATAID_ROLL_PITCH              = 0x0746,
+
     FSSP_DATAID_SPEED      = 0x0830 ,
     FSSP_DATAID_VFAS       = 0x0210 ,
     FSSP_DATAID_VFAS1      = 0x0211 ,
@@ -376,6 +381,13 @@ static void initSmartPortSensors(void)
         }
     }
 #endif
+    
+    if (telemetryIsSensorEnabled(PATS)) {
+        ADD_SENSOR(FSSP_DATAID_ROLL_PITCH);
+        ADD_SENSOR(FSSP_DATAID_BF_VERSION);
+        ADD_SENSOR(FSSP_DATAID_BF_UID);
+        ADD_SENSOR(FSSP_DATAID_ARMING);
+    }
 
     if (sensors(SENSOR_BARO)) {
         if (telemetryIsSensorEnabled(SENSOR_ALTITUDE)) {
@@ -704,7 +716,13 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 *clearToSend = false;
                 break;
 #if defined(USE_ACC)
-            case FSSP_DATAID_ACCX       :
+            case FSSP_DATAID_ROLL_PITCH    : {
+                int16_t pitch  = attitude.values.pitch;
+                int16_t roll  = attitude.values.roll;
+                smartPortSendPackage(id, (roll & 0xffff) | ((pitch << 16) & 0xffff0000));
+                *clearToSend = false;
+                break;
+            } case FSSP_DATAID_ACCX       :
                 smartPortSendPackage(id, lrintf(100 * acc.accADC[X] * acc.dev.acc_1G_rec)); // Multiply by 100 to show as x.xx g on Taranis
                 *clearToSend = false;
                 break;
@@ -717,6 +735,28 @@ void processSmartPortTelemetry(smartPortPayload_t *payload, volatile bool *clear
                 *clearToSend = false;
                 break;
 #endif
+            case FSSP_DATAID_ARMING     :
+                if (!ARMING_FLAG(ARMED)) {
+                    smartPortSendPackage(id, getArmingDisableFlags());
+                    *clearToSend = false;
+                }
+                break;
+            case FSSP_DATAID_BF_VERSION: {
+                if (!ARMING_FLAG(ARMED)) {
+                    uint32_t version = FC_VERSION_PATCH_LEVEL | (FC_VERSION_MINOR << 8) | (FC_VERSION_MAJOR << 16);
+                    smartPortSendPackage(id, version);
+                    *clearToSend = false;
+                }
+                break;
+            }
+            case FSSP_DATAID_BF_UID: {
+                if (!ARMING_FLAG(ARMED)) {
+                    uint32_t * uid = (uint32_t *)pilotConfig()->name;
+                    smartPortSendPackage(id, *uid);
+                    *clearToSend = false;
+                }
+                break;
+            }
             case FSSP_DATAID_T1         :
                 // we send all the flags as decimal digits for easy reading
 
