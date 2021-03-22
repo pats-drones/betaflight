@@ -77,3 +77,5 @@ void pwmWriteServo(uint8_t index, float value);
 
 pwmOutputPort_t *pwmGetMotors(void);
 bool pwmIsSynced(void);
+
+void pwmDisableMotors(void);

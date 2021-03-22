@@ -91,7 +91,7 @@ static const void *cmsx_Ledstrip_OnExit(displayPort_t *pDisp, const OSD_Entry *s
         featureEnableImmediate(FEATURE_LED_STRIP);
         ledStripEnable();
     } else {
-        ledStripDisable();
+        ledStripDisable(false);
         featureDisableImmediate(FEATURE_LED_STRIP);
     }
 

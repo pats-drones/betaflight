@@ -47,6 +47,12 @@
 
 #include "sensors/battery.h"
 
+#include "drivers/light_led.h"
+#include "io/ledstrip.h"
+#include "drivers/pwm_output.h"
+#include "drivers/usb_io.h"
+#include "drivers/rx/rx_cc2500.h"
+
 /**
  * terminology: meter vs sensors
  *
@@ -77,6 +83,8 @@ static voltageMeter_t voltageMeter;
 static batteryState_e batteryState;
 static batteryState_e voltageState;
 static batteryState_e consumptionState;
+
+int sleep_delay_cnt = 0;
 
 #ifndef DEFAULT_CURRENT_METER_SOURCE
 #ifdef USE_VIRTUAL_CURRENT_METER
@@ -236,6 +244,7 @@ static void batteryUpdateVoltageState(void)
     static uint32_t lastVoltageChangeMs;
     switch (voltageState) {
         case BATTERY_OK:
+            sleep_delay_cnt = 0;
             if (voltageMeter.displayFiltered <= batteryWarningHysteresisVoltage) {
                 if (cmp32(millis(), lastVoltageChangeMs) >= batteryConfig()->vbatDurationForWarning * 100) {
                     voltageState = BATTERY_WARNING;
@@ -246,6 +255,7 @@ static void batteryUpdateVoltageState(void)
             break;
 
         case BATTERY_WARNING:
+            sleep_delay_cnt = 0;
             if (voltageMeter.displayFiltered <= batteryCriticalHysteresisVoltage) {
                 if (cmp32(millis(), lastVoltageChangeMs) >= batteryConfig()->vbatDurationForCritical * 100) {
                     voltageState = BATTERY_CRITICAL;
@@ -259,6 +269,7 @@ static void batteryUpdateVoltageState(void)
             break;
 
         case BATTERY_CRITICAL:
+            comatize();
             if (voltageMeter.displayFiltered > batteryCriticalVoltage) {
                 voltageState = BATTERY_WARNING;
                 lastVoltageChangeMs = millis();
@@ -339,6 +350,47 @@ const char * const batteryStateStrings[] = {"OK", "WARNING", "CRITICAL", "NOT PR
 const char * getBatteryStateString(void)
 {
     return batteryStateStrings[getBatteryState()];
+}
+
+void comatize(void)
+{
+    if (sleep_delay_cnt++ > 300) {
+        if (!ARMING_FLAG(ARMED) && !usbCableIsInserted() && batteryCellCount>1) {
+            ledStripDisable(true);
+            LED0_OFF;
+            LED1_OFF;
+            LED2_OFF;
+            pwmDisableMotors();
+            if (sleep_delay_cnt++ > 305) {
+                // set CC2500 in sleep mode
+                cc2500Strobe(CC2500_SIDLE);
+                cc2500Strobe(CC2500_SPWD);
+
+                // Clear PDDS and LPDS bits
+                PWR->CR &= PWR_CR_LPDS | PWR_CR_PDDS | PWR_CR_CWUF;
+
+                // Set PDDS and LPDS bits for standby mode, and set Clear WUF flag (required per datasheet):
+                PWR->CR |= PWR_CR_CWUF;
+                // Enable wakeup pin bit.
+                PWR->CR |=  PWR_CSR_EWUP;
+
+                SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+
+                // System Control Register Bits. See...
+                // http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0497a/Cihhjgdh.html
+                // Set Power down deepsleep bit.
+                PWR->CR |= PWR_CR_PDDS;
+                // Unset Low-power deepsleep.
+                PWR->CR &= ~PWR_CR_LPDS;
+
+                // Now go into stop mode, wake up on interrupt
+                asm("    wfi");
+
+                // Clear SLEEPDEEP bit so we can use SLEEP mode
+                SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+            }
+        }
+    }
 }
 
 void batteryInit(void)

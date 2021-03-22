@@ -223,7 +223,7 @@ void reevaluateLedConfig(void);
 
 void ledStripInit(void);
 void ledStripEnable(void);
-void ledStripDisable(void);
+void ledStripDisable(bool permanent);
 void ledStripUpdate(timeUs_t currentTimeUs);
 
 bool setModeColor(ledModeIndex_e modeIndex, int modeColorIndex, int colorIndex);
