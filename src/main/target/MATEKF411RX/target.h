@@ -34,7 +34,8 @@
 #define USBD_PRODUCT_STRING     "MATEKF411RX"
 #endif
 
-#define LED0_PIN                NONE
+#define PATS_LED_PIN            PB9
+#define PATS_LED_INVERTED
 
 #define USE_BEEPER
 #define BEEPER_PIN              PC15
@@ -110,7 +111,7 @@
 
 #elif defined(CRAZYBEEF4FR)
 #define RX_SPI_EXTI_PIN             PC14
-#define RX_SPI_LED_PIN              PB9
+#define RX_SPI_LED_PIN              NONE
 #define USE_RX_FRSKY_SPI_D
 #define USE_RX_FRSKY_SPI_X
 #define USE_RX_SFHSS_SPI

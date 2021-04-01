@@ -45,6 +45,7 @@
 #include "drivers/transponder_ir.h"
 #include "drivers/usb_io.h"
 #include "drivers/vtx_common.h"
+#include "drivers/light_led.h"
 
 #include "config/config.h"
 #include "fc/core.h"
@@ -163,6 +164,12 @@ static void taskUpdateRxMain(timeUs_t currentTimeUs)
     if (!processRx(currentTimeUs)) {
         return;
     }
+
+    if (rcData[AUX4]<1500)
+        PATS_LED_OFF;
+    else
+        PATS_LED_ON;
+
 
     // updateRcCommands sets rcCommand, which is needed by updateAltHoldState and updateSonarAltHoldState
     updateRcCommands();

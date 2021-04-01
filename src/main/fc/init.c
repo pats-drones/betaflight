@@ -464,6 +464,7 @@ void init(void)
 #if !defined(USE_FAKE_LED)
     ledInit(statusLedConfig());
 #endif
+    LED0_ON;
     LED2_ON;
 
 #ifdef USE_EXTI

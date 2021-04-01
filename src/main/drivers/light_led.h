@@ -24,7 +24,7 @@
 #include "drivers/io_types.h"
 #include "common/utils.h"
 
-#define STATUS_LED_NUMBER 3
+#define STATUS_LED_NUMBER 4
 
 typedef struct statusLedConfig_s {
     ioTag_t ioTags[STATUS_LED_NUMBER];
@@ -48,6 +48,10 @@ PG_DECLARE(statusLedConfig_t, statusLedConfig);
 #define LED2_OFF                 NOOP
 #define LED2_ON                  NOOP
 
+#define PATS_LED_TOGGLE          NOOP
+#define PATS_LED_OFF             NOOP
+#define PATS_LED_ON              NOOP
+
 #else
 
 #define LED0_TOGGLE              ledToggle(0)
@@ -61,6 +65,10 @@ PG_DECLARE(statusLedConfig_t, statusLedConfig);
 #define LED2_TOGGLE              ledToggle(2)
 #define LED2_OFF                 ledSet(2, false)
 #define LED2_ON                  ledSet(2, true)
+
+#define PATS_LED_TOGGLE          ledToggle(3)
+#define PATS_LED_OFF             ledSet(3, false)
+#define PATS_LED_ON              ledSet(3, true)
 
 void ledInit(const statusLedConfig_t *statusLedConfig);
 void ledToggle(int led);
