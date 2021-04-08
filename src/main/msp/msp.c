@@ -2925,11 +2925,11 @@ static mspResult_e mspProcessInCommand(mspDescriptor_t srcDesc, int16_t cmdMSP, 
                 disableRunawayTakeoff = sbufReadU8(src);
             }
             if (command) {
-                mspArmingDisableByDescriptor(srcDesc);
-                setArmingDisabled(ARMING_DISABLED_MSP);
-                if (ARMING_FLAG(ARMED)) {
-                    disarm(DISARM_REASON_ARMING_DISABLED);
-                }
+                // mspArmingDisableByDescriptor(srcDesc);
+                // setArmingDisabled(ARMING_DISABLED_MSP);
+                // if (ARMING_FLAG(ARMED)) {
+                //     disarm(DISARM_REASON_ARMING_DISABLED);
+                // }
 #ifdef USE_RUNAWAY_TAKEOFF
                 runawayTakeoffTemporaryDisable(false);
 #endif
