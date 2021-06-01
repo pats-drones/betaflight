@@ -37,8 +37,23 @@ typedef enum rc_alias {
     AUX5,
     AUX6,
     AUX7,
-    AUX8
+    AUX8,
+    AUX9,
+    AUX10,
+    AUX11,
+    AUX12
 } rc_alias_e;
+
+#define PATS_HEADLESS_DISABLE_MIN 1020
+#define PATS_HEADLESS_DISABLE_MAX 1045
+#define PATS_YAW_RESET_MIN PATS_HEADLESS_DISABLE_MAX
+#define PATS_YAW_RESET_MAX 1080
+#define PID_LOOP_DISABLED_MIN PATS_YAW_RESET_MAX
+#define PID_LOOP_DISABLED_MAX 1105
+#define PATS_DIRECT_SPIN_MOTOR_MIN PID_LOOP_DISABLED_MAX
+#define PATS_DIRECT_SPIN_MOTOR_MAX 1130
+#define PATS_DIRECT_SPIN_MOTOR_REVERSED_MIN PATS_DIRECT_SPIN_MOTOR_MAX
+#define PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX 1180
 
 #define PRIMARY_CHANNEL_COUNT (THROTTLE + 1)
 
@@ -74,7 +89,8 @@ typedef enum {
 typedef enum {
     RC_SMOOTHING_DERIVATIVE_OFF,
     RC_SMOOTHING_DERIVATIVE_PT1,
-    RC_SMOOTHING_DERIVATIVE_BIQUAD
+    RC_SMOOTHING_DERIVATIVE_BIQUAD,
+    RC_SMOOTHING_DERIVATIVE_AUTO,
 } rcSmoothingDerivativeFilter_e;
 
 #define ROL_LO (1 << (2 * ROLL))
@@ -122,6 +138,7 @@ typedef struct rcSmoothingFilter_s {
     rcSmoothingInputFilter_e inputFilterType;
     uint8_t inputCutoffSetting;
     uint16_t inputCutoffFrequency;
+    rcSmoothingDerivativeFilter_e derivativeFilterTypeSetting;
     rcSmoothingDerivativeFilter_e derivativeFilterType;
     uint8_t derivativeCutoffSetting;
     uint16_t derivativeCutoffFrequency;

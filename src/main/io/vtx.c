@@ -33,7 +33,7 @@
 #include "drivers/vtx_common.h"
 #include "drivers/vtx_table.h"
 
-#include "fc/config.h"
+#include "config/config.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
 

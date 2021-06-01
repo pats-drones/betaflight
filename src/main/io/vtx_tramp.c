@@ -92,7 +92,9 @@ static uint8_t trampControlMode = 0;
 #define TRAMP_CONTROL_RACE_LOCK 0x01
 
 // Maximum number of requests sent to try a config change
-#define TRAMP_MAX_RETRIES 2
+// Some VTX fail to respond to every request (like Matek FCHUB-VTX) so
+// we sometimes need multiple retries to get the VTX to respond.
+#define TRAMP_MAX_RETRIES 20
 
 uint32_t trampConfFreq = 0;
 uint8_t  trampFreqRetries = 0;
@@ -519,7 +521,7 @@ static void vtxTrampSetBandAndChannel(vtxDevice_t *vtxDevice, uint8_t band, uint
 static void vtxTrampSetPowerByIndex(vtxDevice_t *vtxDevice, uint8_t index)
 {
     uint16_t powerValue = 0;
-    if (vtxCommonLookupPowerValue(vtxDevice, index, &powerValue) && (trampRFPowerMax == 0 || powerValue <= trampRFPowerMax)) {
+    if (vtxCommonLookupPowerValue(vtxDevice, index, &powerValue)) {
         trampSetRFPower(powerValue);
         trampCommitChanges();
     }
@@ -591,6 +593,15 @@ static bool vtxTrampGetStatus(const vtxDevice_t *vtxDevice, unsigned *status)
     return true;
 }
 
+static uint8_t vtxTrampGetPowerLevels(const vtxDevice_t *vtxDevice, uint16_t *levels, uint16_t *powers)
+{
+    UNUSED(vtxDevice);
+    UNUSED(levels);
+    UNUSED(powers);
+
+    return 0;
+}
+
 static const vtxVTable_t trampVTable = {
     .process = vtxTrampProcess,
     .getDeviceType = vtxTrampGetDeviceType,
@@ -603,12 +614,13 @@ static const vtxVTable_t trampVTable = {
     .getPowerIndex = vtxTrampGetPowerIndex,
     .getFrequency = vtxTrampGetFreq,
     .getStatus = vtxTrampGetStatus,
+    .getPowerLevels = vtxTrampGetPowerLevels,
 };
 #endif
 
 bool vtxTrampInit(void)
 {
-    serialPortConfig_t *portConfig = findSerialPortConfig(FUNCTION_VTX_TRAMP);
+    const serialPortConfig_t *portConfig = findSerialPortConfig(FUNCTION_VTX_TRAMP);
 
     if (portConfig) {
         portOptions_e portOptions = 0;

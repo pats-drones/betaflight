@@ -48,7 +48,7 @@
 #include "drivers/time.h"
 #include "drivers/vtx_common.h"
 
-#include "fc/config.h"
+#include "config/config.h"
 #include "fc/core.h"
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
@@ -269,6 +269,7 @@ STATIC_UNIT_TESTED void updateLedCount(void)
     ledCounts.count = count;
     ledCounts.ring = countRing;
     ledCounts.larson = countScanner;
+    setUsedLedCount(ledCounts.count);
 }
 
 void reevaluateLedConfig(void)
@@ -434,14 +435,14 @@ static quadrant_e getLedQuadrant(const int ledIndex)
     return quad;
 }
 
-static hsvColor_t* getDirectionalModeColor(const int ledIndex, const modeColorIndexes_t *modeColors)
+static const hsvColor_t* getDirectionalModeColor(const int ledIndex, const modeColorIndexes_t *modeColors)
 {
     const ledConfig_t *ledConfig = &ledStripStatusModeConfig()->ledConfigs[ledIndex];
     const int ledDirection = ledGetDirection(ledConfig);
 
     for (unsigned i = 0; i < LED_DIRECTION_COUNT; i++) {
         if (ledDirection & (1 << i)) {
-            return &ledStripStatusModeConfigMutable()->colors[modeColors->color[i]];
+            return &ledStripStatusModeConfig()->colors[modeColors->color[i]];
         }
     }
 
@@ -569,10 +570,10 @@ static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
             if (failsafeIsActive()) {
                 warningFlags |= 1 << WARNING_FAILSAFE;
             }
-            if (!ARMING_FLAG(ARMED) && isArmingDisabled()) {
+            if (ARMING_FLAG(ARMED) && isArmingDisabled() && rxIsReceivingSignal()&& !failsafeIsActive()) {
                 warningFlags |= 1 << WARNING_ARMING_DISABLED;
             }
-            if (isFlipOverAfterCrashActive()) {
+            if (isFlipOverAfterCrashActive() || (rcData[AUX2] > PATS_DIRECT_SPIN_MOTOR_REVERSED_MIN && rcData[AUX2] < PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX)) {
                 warningFlags |= 1 << WARNING_CRASH_FLIP_ACTIVE;
             }
         }
@@ -603,7 +604,7 @@ static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
         }
     } else {
         if (isBeeperOn()) {
-            warningColor = &hsv[ledStripConfig()->ledstrip_visual_beeper_color];
+         //   warningColor = &hsv[ledStripConfig()->ledstrip_visual_beeper_color];
         }
     }
 

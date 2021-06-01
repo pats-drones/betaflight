@@ -42,7 +42,6 @@
 // XXX Trying to fiddle with constants here.
 
 // Symbol rate [symbol/sec]
-#define MOTOR_DSHOT1200_SYMBOL_RATE    (1200 * 1000)
 #define MOTOR_DSHOT600_SYMBOL_RATE     (600 * 1000)
 #define MOTOR_DSHOT300_SYMBOL_RATE     (300 * 1000)
 #define MOTOR_DSHOT150_SYMBOL_RATE     (150 * 1000)
@@ -111,7 +110,7 @@ typedef struct bbPort_s {
 
     uint8_t direction;
 
-#ifdef USE_DMA_REGISTER_CACHE 
+#ifdef USE_DMA_REGISTER_CACHE
     // DMA resource register cache
     dmaRegCache_t dmaRegOutput;
     dmaRegCache_t dmaRegInput;
@@ -157,6 +156,7 @@ typedef struct bbPort_s {
     uint32_t outputIrq;
     uint32_t inputIrq;
 #endif
+    resourceOwner_t owner;
 } bbPort_t;
 
 // Per motor output
@@ -200,7 +200,8 @@ extern uint32_t bbOutputBuffer[MOTOR_DSHOT_BUFFER_SIZE * MAX_SUPPORTED_MOTOR_POR
 // <sampling period> = 0.44us
 // <slack> = 10%
 // (30 + 26 + 3) / 0.44 = 134
-#define DSHOT_BITBANG_PORT_INPUT_BUFFER_LENGTH 134
+// In some cases this was not enough, so we add 6 extra samples
+#define DSHOT_BITBANG_PORT_INPUT_BUFFER_LENGTH 140
 extern uint16_t bbInputBuffer[DSHOT_BITBANG_PORT_INPUT_BUFFER_LENGTH * MAX_SUPPORTED_MOTOR_PORTS];
 
 void bbGpioSetup(bbMotor_t *bbMotor);

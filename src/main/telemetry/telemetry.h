@@ -27,8 +27,12 @@
 
 #pragma once
 
-#include "pg/pg.h"
 #include "io/serial.h"
+
+#include "pg/pg.h"
+
+#include "rx/rx.h"
+
 #include "telemetry/ibus_shared.h"
 
 typedef enum {
@@ -66,7 +70,8 @@ typedef enum {
                             | ESC_SENSOR_RPM \
                             | ESC_SENSOR_TEMPERATURE,
     SENSOR_TEMPERATURE     = 1 << 19,
-    SENSOR_ALL             = (1 << 20) - 1,
+    PATS                   = 1 << 20,
+    SENSOR_ALL             = (1 << 21) - 1,
 } sensor_e;
 
 typedef struct telemetryConfig_s {
@@ -90,7 +95,7 @@ PG_DECLARE(telemetryConfig_t, telemetryConfig);
 extern serialPort_t *telemetrySharedPort;
 
 void telemetryInit(void);
-bool telemetryCheckRxPortShared(const serialPortConfig_t *portConfig);
+bool telemetryCheckRxPortShared(const serialPortConfig_t *portConfig, const SerialRXType serialrxProvider);
 
 void telemetryCheckState(void);
 void telemetryProcess(uint32_t currentTime);

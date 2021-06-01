@@ -59,7 +59,7 @@
 #undef USE_TELEMETRY_SRXL
 #endif
 
-#define ENABLE_DSHOT_DMAR       true
+#define ENABLE_DSHOT_DMAR       DSHOT_DMAR_ON
 
 #define LED0_PIN                PB3
 #define USE_BEEPER 
@@ -130,10 +130,12 @@
 #define USE_RX_SPI
 #define USE_RX_FRSKY_SPI_D
 #define USE_RX_FRSKY_SPI_X
-#define USE_RX_FRSKY_SPI_TELEMETRY
 #define USE_RX_SFHSS_SPI
+#define USE_RX_REDPINE_SPI
 #define DEFAULT_RX_FEATURE      FEATURE_RX_SPI	
 #define RX_SPI_DEFAULT_PROTOCOL RX_SPI_FRSKY_X
+#define USE_RX_FRSKY_SPI_TELEMETRY
+
 #define RX_SPI_INSTANCE         SPI2
 #define RX_NSS_PIN              SPI2_NSS_PIN
 #define RX_SPI_EXTI_PIN         PA8
