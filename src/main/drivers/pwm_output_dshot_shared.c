@@ -50,8 +50,6 @@
 
 #include "pwm_output_dshot_shared.h"
 
-#include "fc/core.h"
-
 FAST_RAM_ZERO_INIT uint8_t dmaMotorTimerCount = 0;
 #ifdef STM32F7
 FAST_RAM_ZERO_INIT motorDmaTimer_t dmaMotorTimers[MAX_DMA_TIMERS];

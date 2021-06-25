@@ -705,7 +705,7 @@ void runawayTakeoffTemporaryDisable(uint8_t disableFlag)
 
 // calculate the throttle stick percent - integer math is good enough here.
 // returns negative values for reversed thrust in 3D mode
-int8_t calculateThrottlePercent(void)
+const int8_t calculateThrottlePercent(void)
 {
     uint8_t ret = 0;
     int channelData = constrain(rcData[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX);
@@ -766,7 +766,7 @@ bool isAirmodeActivated()
  */
 bool processRx(timeUs_t currentTimeUs)
 {
-  if (safetydroneflipBatteryisunsafeget()){
+  if (batteryIsCritical()){
         return;
     }
     

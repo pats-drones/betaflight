@@ -37,7 +37,6 @@
 #include "drivers/nvic.h"
 #include "dma.h"
 #include "rcc.h"
-#include "fc/core.h"
 #include "pg/timerup.h"
 
 static HAL_StatusTypeDef result;
