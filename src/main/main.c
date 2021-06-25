@@ -27,8 +27,6 @@
 
 #include "scheduler/scheduler.h"
 
-
-
 void run(void);
 
 int main(void)
@@ -36,7 +34,7 @@ int main(void)
     init();
 
     run();
-    
+
     return 0;
 }
 

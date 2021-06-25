@@ -57,6 +57,7 @@
 #include "flight/imu.h"
 #include "flight/mixer.h"
 #include "flight/pid.h"
+#include "flight/safetydroneflip.h"
 
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/beeper.h"
@@ -94,8 +95,6 @@
 #include "scheduler/scheduler.h"
 
 #include "telemetry/telemetry.h"
-
-#include "safetydroneflip/safetydroneflip.h"
 
 #ifdef USE_BST
 #include "i2c_bst.h"
@@ -162,6 +161,10 @@ static void taskUpdateAccelerometer(timeUs_t currentTimeUs)
 
 static void taskUpdateRxMain(timeUs_t currentTimeUs)
 {
+
+  if (batteryIsCritical()){
+        return;
+    }
     if (!processRx(currentTimeUs)) {
         return;
     }
@@ -182,7 +185,7 @@ static void taskUpdateRxMain(timeUs_t currentTimeUs)
 
         //direct motor control from pats basestation
     static bool motors_disarm_needs_reset = false;
-    if (!ARMING_FLAG(ARMED) && rcData[AUX2] > PATS_DIRECT_SPIN_MOTOR_MIN && rcData[AUX2] < PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX && (rxIsReceivingSignal()|| batteryIsCritical())) {
+    if (!ARMING_FLAG(ARMED) && rcData[AUX2] > PATS_DIRECT_SPIN_MOTOR_MIN && rcData[AUX2] < PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX && rxIsReceivingSignal()) {
             motors_disarm_needs_reset = true;
 
             if (rcData[ROLL]<1000)

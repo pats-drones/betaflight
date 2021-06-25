@@ -59,13 +59,12 @@
 #include "flight/mixer_tricopter.h"
 #include "flight/pid.h"
 #include "flight/rpm_filter.h"
+#include "flight/safetydroneflip.h"
 
 #include "rx/rx.h"
 
 #include "sensors/battery.h"
 #include "sensors/gyro.h"
-
-#include "safetydroneflip/safetydroneflip.h"
 
 PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 0);
 
@@ -781,9 +780,9 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
 
     // Disarmed mode
     if (!ARMING_FLAG(ARMED)) {
-         for (int i = 0; i < motorCount; i++) {
-             motor[i] = motor_disarmed[i];
-         }
+        for (int i = 0; i < motorCount; i++) {
+            motor[i] = motor_disarmed[i];
+        }
     }
    
     safetydroneflipMain();    

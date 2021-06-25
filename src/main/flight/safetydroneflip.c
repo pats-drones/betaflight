@@ -1,4 +1,4 @@
-#include "safetydroneflip/safetydroneflip.h"
+#include "flight/safetydroneflip.h"
 
 #include "drivers/time.h"
 
@@ -14,6 +14,7 @@
 #include "sensors/boardalignment.h"
 
 #include "io/motors.h"
+#include "flight/imu.h"
 
 #include <stdbool.h>
 
@@ -66,7 +67,7 @@ bool batteryIsCritical(void){
 uint16_t GetThrottle(int reset) //get the throttle for the drone
   {
     static uint16_t Motorthrottle = 950;
-    static bool ValueUp = false;
+    static bool ValueUp = false; //sees if the value for Motorthrottle hase gone up
     static unsigned long Pervious_millis = 0;
 
     if (reset == 1){ //if the drone is upside down the function is reset
@@ -120,9 +121,7 @@ void safetydroneflipMain (void){
     static unsigned long previousMS = 0;
     static unsigned long previousMsSafeVoltage = 0;
 
-
-
- /*   if ( (millis()-previousMS) <= 30000){
+    if ( (millis()-previousMS) <= 30000){
        if  (voltageSmoothed < Previouslowestvalue){
            Previouslowestvalue = voltageSmoothed;
        }   
@@ -131,24 +130,13 @@ void safetydroneflipMain (void){
         previousMS = millis();
         lowestvalue = Previouslowestvalue;
         Previouslowestvalue = 500;
+    }
 
-    }*/
-    int16_t debugtest = (int16_t)(orientation * 10);
-    int16_t debugtest2;
-    debugtest2 = isupsidedown() * 10;
-    static int test2 = 0; 
-    test2++;
-    debug[0]= test2;
-    debug[1]= debugtest2;
-
-    int16_t test =  isupsidedown() * 10;
-    debug[2] = test;
     if ((lowestvalue >= UNSAFE_VALUE) || (batteryCriticalStatus == true)){
         previousMsSafeVoltage = millis(); 
     }
 
-    //if ((lowestvalue >= UNSAFE_VALUE) || (batteryCriticalStatus == true)|| (voltageSmoothed > UNSAFE_VALUE_HIGH))
-    if (millis()>10000)
+    if ((lowestvalue >= UNSAFE_VALUE) || (batteryCriticalStatus == true)|| (voltageSmoothed > UNSAFE_VALUE_HIGH))
     { 
         if (orientation < -0.5) //if upside down
         {
@@ -168,12 +156,10 @@ void safetydroneflipMain (void){
     }
 
    if (((lowestvalue < UNSAFE_VALUE) && (batteryCriticalStatus == true))){ //extra safety
-        if (millis()-previousMsSafeVoltage > 60000){ // aproximitly a minute
-            
+        if ((millis()-previousMsSafeVoltage) > 60000){ // aproximitly a minute
             Motorthrottle = GetThrottle(1);
             Motors_out();
             batteryCriticalStatus = false;
-
         }
     }
 }
