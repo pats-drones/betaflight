@@ -22,8 +22,22 @@
 #define UNSAFE_VALUE_HIGH 480 //unsafe value for the battery normally 430// meervoud van 1 = 0.01 v
 
 bool batteryCriticalStatus= false;
+bool setReverse = false; 
 
-void Motors_out(void) //tuns off motors when neccesary
+void Motors_reversed(void){
+    dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
+    dshotCommandWrite(0, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);       
+    setReverse = true;     
+}
+
+void Motors_normal(void){
+    dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
+    dshotCommandWrite(0, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
+    setReverse = false;
+
+}
+
+void Motors_out(void) //tuns off motors 
 {
     uint8_t motorCount = getMotorCount();
 
@@ -35,22 +49,17 @@ void Motors_out(void) //tuns off motors when neccesary
 
 void flipDrone(int Motorthrotle) //controlls the motors
 { 
-    static bool setReverse = false;
-
-    if (!setReverse) {        
-        dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
-        dshotCommandWrite(0, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
-        setReverse = true;
-    }
     uint8_t motorCount = getMotorCount();
     for (int i = 0; i < motorCount; i++)
     {
         motor[i] = 0;
     }
-    //Motorthrotle = 1000;
-        
+
+    if (!setReverse) { 
+        Motors_reversed();
+    }  
     //led is the back
-    if (Motorthrotle !=0 ){
+    if (Motorthrotle > 500){
     motor[0] = Motorthrotle-500; //right back
     motor[1] = Motorthrotle;   //right front
     motor[2] = Motorthrotle-500;   //left back
@@ -130,7 +139,7 @@ void safetydroneflipMain (void){
         Previouslowestvalue = 500;
     }
 
-    if ((lowestvalue >= UNSAFE_VALUE) || (batteryCriticalStatus == true)){
+    if ((lowestvalue >= UNSAFE_VALUE) && (batteryCriticalStatus == true)){
         previousMsSafeVoltage = millis(); 
     }
 
@@ -138,23 +147,27 @@ void safetydroneflipMain (void){
     { 
         if (orientation < -0.5) //if upside down
         {
+            if (setReverse) {        
+                Motors_normal();
+            }
             Motors_out();
             GetThrottle(1);
             batteryCriticalStatus = false;
             Motorthrottle = 950;
-            debug[3]= 30;
         }
         else //not upside down or sensor not working
         {
             batteryCriticalStatus = true;
             Motorthrottle = GetThrottle(0);
             flipDrone(Motorthrottle);
-            debug[3]= 50;
         }
     }
 
-   if (((lowestvalue < UNSAFE_VALUE) && (batteryCriticalStatus == true))){ //extra safety
-        if ((millis()-previousMsSafeVoltage) > 60000){ // aproximitly a minute
+   if (((lowestvalue < UNSAFE_VALUE) && (batteryCriticalStatus == true))){ //extra safety turns the function off after a minute
+        if ((millis()-previousMsSafeVoltage) > 60000){ 
+            if (setReverse) {        
+                Motors_normal();
+            }
             Motorthrottle = GetThrottle(1);
             Motors_out();
             batteryCriticalStatus = false;
