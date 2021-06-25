@@ -1,12 +1,13 @@
-#include "flight/safetydroneflip.h"
+#include <stdbool.h>
 
 #include "drivers/time.h"
+#include "drivers/dshot_command.h"
 
 #include "flight/mixer.h"
+#include "flight/safetydroneflip.h"
+#include "flight/imu.h"
 
 #include "msp/msp.h"
-
-#include "drivers/dshot_command.h"
 
 #include "sensors/battery.h"
 #include "sensors/gyro.h"
@@ -14,9 +15,6 @@
 #include "sensors/boardalignment.h"
 
 #include "io/motors.h"
-#include "flight/imu.h"
-
-#include <stdbool.h>
 
 #include "build/debug.h"
 
