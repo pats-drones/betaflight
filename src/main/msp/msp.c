@@ -145,16 +145,6 @@
 #include "msp.h"
 
 
-int debug_a = 123;
-int debug_b = 111;
-
-void DEBUG_A(int db_a) {
-    debug_a = db_a;
-}
-void DEBUG_B(int db_b) {
-    debug_b = db_b;
-}
-
 static const char * const flightControllerIdentifier = FC_FIRMWARE_IDENTIFIER; // 4 UPPER CASE alpha numeric characters that identify the flight controller.
 
 enum {
@@ -707,11 +697,10 @@ static bool mspCommonProcessOutCommand(int16_t cmdMSP, sbuf_t *dst, mspPostProce
 
     case MSP_ANALOG:
         sbufWriteU8(dst, (uint8_t)constrain(getLegacyBatteryVoltage(), 0, 255));
-        sbufWriteU16(dst, (uint16_t)debug_a); // milliamp hours drawn from battery
-        sbufWriteU16(dst, (uint16_t)debug_b);
-        sbufWriteU16(dst, (int16_t) debug_a); // send current in 0.01 A steps, range is -320A to 320A
-        sbufWriteU16(dst, (int16_t) debug_b);
-        // debug_a++;
+        sbufWriteU16(dst, (uint16_t)constrain(getMAhDrawn(), 0, 0xFFFF)); // milliamp hours drawn from battery
+        sbufWriteU16(dst, getRssi());
+        sbufWriteU16(dst, (int16_t)constrain(getAmperage(), -0x8000, 0x7FFF)); // send current in 0.01 A steps, range is -320A to 320A
+        sbufWriteU16(dst, getBatteryVoltage());
         break;
 
     case MSP_DEBUG:
@@ -1357,8 +1346,8 @@ static bool mspProcessOutCommand(int16_t cmdMSP, sbuf_t *dst)
 
 #ifdef USE_GPS
     case MSP_GPS_CONFIG:
-        sbufWriteU8(dst, debug_b);
-        sbufWriteU8(dst, debug_a);
+        sbufWriteU8(dst, gpsConfig()->provider);
+        sbufWriteU8(dst, gpsConfig()->sbasMode);
         sbufWriteU8(dst, gpsConfig()->autoConfig);
         sbufWriteU8(dst, gpsConfig()->autoBaud);
         // Added in API version 1.43
