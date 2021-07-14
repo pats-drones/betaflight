@@ -57,6 +57,7 @@
 #include "flight/imu.h"
 #include "flight/mixer.h"
 #include "flight/pid.h"
+#include "flight/safetydroneflip.h"
 
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/beeper.h"
@@ -160,6 +161,10 @@ static void taskUpdateAccelerometer(timeUs_t currentTimeUs)
 
 static void taskUpdateRxMain(timeUs_t currentTimeUs)
 {
+
+  if (batteryIsCritical()){
+        return;
+    }
     if (!processRx(currentTimeUs)) {
         return;
     }

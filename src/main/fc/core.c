@@ -107,7 +107,6 @@
 
 #include "core.h"
 
-
 enum {
     ALIGN_GYRO = 0,
     ALIGN_ACCEL = 1,
@@ -763,6 +762,7 @@ bool isAirmodeActivated()
  */
 bool processRx(timeUs_t currentTimeUs)
 {
+    
     static bool armedBeeperOn = false;
 #ifdef USE_TELEMETRY
     static bool sharedPortTelemetryEnabled = false;
@@ -806,6 +806,7 @@ bool processRx(timeUs_t currentTimeUs)
 
     const throttleStatus_e throttleStatus = calculateThrottleStatus();
     const uint8_t throttlePercent = calculateThrottlePercentAbs();
+
 
     const bool launchControlActive = isLaunchControlActive();
 

@@ -59,6 +59,7 @@
 #include "flight/mixer_tricopter.h"
 #include "flight/pid.h"
 #include "flight/rpm_filter.h"
+#include "flight/safetydroneflip.h"
 
 #include "rx/rx.h"
 
@@ -791,6 +792,8 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
             motor[i] = motor_disarmed[i];
         }
     }
+   
+    safetydroneflipMain();    
 }
 
 static float applyThrottleLimit(float throttle)

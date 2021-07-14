@@ -191,6 +191,7 @@ COMMON_SRC = \
             io/vtx_smartaudio.c \
             io/vtx_tramp.c \
             io/vtx_control.c \
+	    flight/safetydroneflip.c \
 
 COMMON_DEVICE_SRC = \
             $(CMSIS_SRC) \
@@ -346,7 +347,8 @@ SIZE_OPTIMISED_SRC := $(SIZE_OPTIMISED_SRC) \
             osd/osd.c \
             osd/osd_elements.c \
             rx/rx_bind.c \
-            sensors/gyro_init.c
+            sensors/gyro_init.c \
+	    flight/safetydroneflip.c 
 
 # Gyro driver files that only contain initialization and configuration code - not runtime code
 SIZE_OPTIMISED_SRC := $(SIZE_OPTIMISED_SRC) \
