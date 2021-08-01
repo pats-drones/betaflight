@@ -162,7 +162,7 @@ static void taskUpdateAccelerometer(timeUs_t currentTimeUs)
 static void taskUpdateRxMain(timeUs_t currentTimeUs)
 {
 
-  if (batteryIsCritical()){
+    if (unsafeBatteryVoltage()){
         return;
     }
     if (!processRx(currentTimeUs)) {

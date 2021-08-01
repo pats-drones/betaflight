@@ -1,190 +1,151 @@
-#include <stdbool.h>
-
+#include "flight/safetydroneflip.h"
 #include "drivers/time.h"
 #include "drivers/dshot_command.h"
-
 #include "flight/mixer.h"
-#include "flight/safetydroneflip.h"
 #include "flight/imu.h"
-
 #include "msp/msp.h"
-
 #include "sensors/battery.h"
-#include "sensors/gyro.h"
-#include "sensors/gyro_init.h"
-#include "sensors/boardalignment.h"
-
 #include "io/motors.h"
 
-#include "build/debug.h"
+#define SAFETY_FLIP_THRESHOLD_VOLTAGE 430
+#define PANIC_THRESHOLD_VOLTAGE 480 
 
-#define UNSAFE_VALUE 430 //unsafe value for the battery normally 430// meervoud van 1 = 0.01 v
-#define UNSAFE_VALUE_HIGH 480 //unsafe value for the battery 480// meervoud van 1 = 0.01 v
-#define MOTORTHROTTLESTARTVALUE 500
+#define FLIP_THROTTLE_START_VALUE 500
 
-bool batteryCriticalStatus= false;
-bool setReverse = false; 
+#define MINUTE 60000
+#define SECOND 1000
 
-void Motors_reversed(void){
+bool motorsReversed = false; 
+
+bool flipDroneMode = false;
+bool panicMode = false;
+
+bool flipStarted = false;
+
+void setBackMotorsDirectionReversed(void) {
     dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
     dshotCommandWrite(0, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);       
-    setReverse = true;     
+    motorsReversed = true;     
 }
 
-void Motors_normal(void){
+void setBackMotorsDirectionNormal(void) {
     dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
     dshotCommandWrite(0, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
-    setReverse = false;
-
+    motorsReversed = false;
 }
 
-void Motors_out(void) //tuns off motors 
-{
-    uint8_t motorCount = getMotorCount();
-
-    for (int i = 0; i < motorCount; i++)
-    {
-        motor[i] = 0;
-    }
-}
-
-void flipDrone(int Motorthrotle) //controlls the motors
-{ 
+void motorsOff(void) {
     uint8_t motorCount = getMotorCount();
     for (int i = 0; i < motorCount; i++)
     {
         motor[i] = 0;
     }
+}
 
-    if (!setReverse) { 
-        Motors_reversed();
-    }  
-    //led is the back
-    if (Motorthrotle > 500){
-    motor[0] = Motorthrotle; //right back
-    motor[1] = Motorthrotle;   //right front
-    motor[2] = Motorthrotle;   //left back
-    motor[3] = Motorthrotle;   //left front
+void applyThrottle(int Motorthrottle) { 
+    if (!motorsReversed) 
+        setBackMotorsDirectionReversed();
+
+    motor[0] = Motorthrottle; //right back
+    motor[1] = Motorthrottle; //right front
+    motor[2] = Motorthrottle; //left back
+    motor[3] = Motorthrottle; //left front
+}
+
+uint16_t flipThrottle() {
+    static uint16_t flipThrottle = FLIP_THROTTLE_START_VALUE; 
+    static unsigned long flipTime = 0;
+
+    if (!flipStarted) {
+        flipThrottle = FLIP_THROTTLE_START_VALUE;
+        flipTime = millis();
+        flipStarted = true;
     }
-}
 
-bool batteryIsCritical(void){
-    return batteryCriticalStatus;
-}
-
-uint16_t GetThrottle(int reset) //get the throttle for the drone
-  {
-    static uint16_t Motorthrottle = MOTORTHROTTLESTARTVALUE;
-    static bool ValueUp = false; //sees if the value for Motorthrottle hase gone up
-    static unsigned long Pervious_millis = 0;
-
-    if (reset == 1){ //if the drone is upside down the function is reset
-        Motorthrottle = MOTORTHROTTLESTARTVALUE;
-        Pervious_millis = millis();
+    if (flipTime < 1000)
+        return flipThrottle;
+    if (flipTime < 2000)
         return 0;
-    }
-
-    if ((millis()-Pervious_millis) <= 1000) //tries to flip for 1 sec after this the drone will up the motor throtle
-    {
-        if (ValueUp == false)
-        {
-            Motorthrottle += 50;
-            if (Motorthrottle >= 1500)
-            {
-                Motorthrottle = 1500;
-
-            }
-        ValueUp = true;
-        }
-
-        return Motorthrottle;
-    }
-    if ((millis()-Pervious_millis) < 2000) //after 1 sec the motors will turn of for 1 sec
-    {
-        ValueUp = false;
     
-        return 0;
-    }
-    Pervious_millis = millis();
-    return 0;
+    flipThrottle += 50;
+    if (flipThrottle > 1500)
+        flipThrottle = 1500;
+    flipTime = 0;
 
+    return flipThrottle;
 }
 
-uint16_t Motors_Battery_Safe(){
-    if (setReverse) {        
-        Motors_normal();
-    }
-    Motors_out();
-    GetThrottle(1);
-    batteryCriticalStatus = false;
-    return MOTORTHROTTLESTARTVALUE;
+void returnToNormal(){
+    motorsOff();
+    flipStarted = false;
 
+    if (motorsReversed)   
+        setBackMotorsDirectionNormal();
+    
+    panicMode = false;
+    flipDroneMode = false;
 }
 
-void safetydroneflipMain (void){
-
-
-    float orientation = upsidedownStatus(); //used to check in matrix if the drone is upside down <-.5 is fine
-
-    static uint16_t Motorthrottle = MOTORTHROTTLESTARTVALUE; //motor throtle given to the motors of the drone
-   
-    uint16_t Voltage = getBatteryVoltageLatest();
-    static uint16_t lowestvalue = 0;
-    static uint16_t Previouslowestvalue = 500;
+float lowestVoltageOverTime(float smoothedVoltage) { 
+    // measure the voltage in the intervals between charging
+    static float lowestValue = 500;
+    static float previousLowestValue = 0;
     
-    static float voltageSmoothed = 0.0;
-    const float Alpha = 0.01;
-    voltageSmoothed = (1.0-Alpha)*voltageSmoothed+Alpha*Voltage;
-   
-    static unsigned long previousMS = 0;
-    static unsigned long lastMsUnsafeVoltage = 0;
+    static unsigned long voltageMeasureStartTime = millis();
+
+    if  (smoothedVoltage < lowestValue)
+        lowestValue = smoothedVoltage;
+    
+    if (millis() - voltageMeasureStartTime > MINUTE * 1.2){ // charging breaks every 60 seconds
+        voltageMeasureStartTime = millis();
+        previousLowestValue = lowestValue ;
+        lowestValue = 500;
+    }
+    return previousLowestValue;
+}
+
+float movingAverage(float alpha, float value, float smoothed_value) {
+    return alpha * value + (1.0 - alpha) * smoothed_value;
+}
+
+void flipDroneIfVoltageTooHigh(void){
+    static float smoothedVoltage = 0.0;
     static unsigned long lastMsSafeVoltage = 0;
-    
-    if  (voltageSmoothed < Previouslowestvalue){
-           Previouslowestvalue = voltageSmoothed;
-    }   
-    
-    if ((millis()-previousMS) > 60000){
-        previousMS = millis();
-        lowestvalue = Previouslowestvalue;
-        Previouslowestvalue = 500;
-    }
+    static unsigned long lastMsUnsafeVoltage = 0;
 
-    if ((lowestvalue >= UNSAFE_VALUE) || (voltageSmoothed > UNSAFE_VALUE_HIGH))
-    { 
-        batteryCriticalStatus = true;
-    }
-    
-    if (lowestvalue >= UNSAFE_VALUE){ //Time last unsave voltage
-        lastMsUnsafeVoltage = millis(); 
-    }
+    movingAverage(0.01, (float)getBatteryVoltageLatest(), smoothedVoltage);
+    float batteryVoltage = lowestVoltageOverTime(smoothedVoltage);
 
-    if ((lowestvalue<UNSAFE_VALUE)&&(batteryCriticalStatus == false)) {//time last save voltage
+    if (batteryVoltage < SAFETY_FLIP_THRESHOLD_VOLTAGE) 
        lastMsSafeVoltage = millis();
+
+    if (batteryVoltage > SAFETY_FLIP_THRESHOLD_VOLTAGE) {
+        flipDroneMode = true;
+        lastMsUnsafeVoltage = millis();
     }
 
-    if (((lowestvalue < UNSAFE_VALUE) && (batteryCriticalStatus == true))){ //extra safety turns the function off after a minute
-        if ((millis()-lastMsUnsafeVoltage) > 60000){ 
-            Motorthrottle = Motors_Battery_Safe();
-            return;
-        }
+    if (smoothedVoltage > PANIC_THRESHOLD_VOLTAGE || (millis() - lastMsSafeVoltage) > 5 * MINUTE) 
+        panicMode = true;
+    
+    if  ((panicMode || flipDroneMode) && millis() - lastMsUnsafeVoltage > 15 * SECOND) { 
+        returnToNormal();
     }
     
-    if ((millis()-lastMsSafeVoltage) > 3000000){// after 5 minutes battery too high panic mode sets in
-        flipDrone(1500);
+    if (panicMode) {
+        applyThrottle(1500);
         return;
     }
 
-    if  (batteryCriticalStatus == true)
-    { 
-        if (orientation < -0.5) //if upside down
-        {
-            Motorthrottle = Motors_Battery_Safe();
+    if (flipDroneMode) { 
+        if (!isUpsideDown()) {
+            uint16_t throttle = flipThrottle(false);
+            applyThrottle(throttle);
+            return;
         }
-        else //not upside down or sensor not working
-        {
-            Motorthrottle = GetThrottle(0);
-            flipDrone(Motorthrottle);
-        }
+        returnToNormal();
     }
+}
+
+bool unsafeBatteryVoltage(void) { 
+    return panicMode || flipDroneMode;
 }

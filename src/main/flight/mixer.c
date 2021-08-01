@@ -785,7 +785,7 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
         }
     }
    
-    safetydroneflipMain();    
+    flipDroneIfVoltageTooHigh();    
 }
 
 static float applyThrottleLimit(float throttle)

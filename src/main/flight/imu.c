@@ -812,7 +812,7 @@ bool isUpright(void)
 #endif
 }
 
-float upsidedownStatus(void){
+bool isUpsideDown(void){
     imuComputeRotationMatrix();
-    return rMat[2][2];
+    return rMat[2][2] < -0.5;
 }
