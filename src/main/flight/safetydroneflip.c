@@ -7,7 +7,7 @@
 #include "sensors/battery.h"
 #include "io/motors.h"
 
-#define SAFETY_FLIP_THRESHOLD_VOLTAGE 430
+#define SAFETY_FLIP_THRESHOLD_VOLTAGE 435
 #define PANIC_THRESHOLD_VOLTAGE 480 
 
 #define FLIP_THROTTLE_START_VALUE 500
@@ -24,13 +24,13 @@ bool flipStarted = false;
 
 void setBackMotorsDirectionReversed(void) {
     dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
-    dshotCommandWrite(0, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);       
+    dshotCommandWrite(3, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);       
     motorsReversed = true;     
 }
 
 void setBackMotorsDirectionNormal(void) {
     dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
-    dshotCommandWrite(0, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
+    dshotCommandWrite(3, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
     motorsReversed = false;
 }
 
@@ -46,10 +46,10 @@ void applyThrottle(int Motorthrottle) {
     if (!motorsReversed) 
         setBackMotorsDirectionReversed();
 
-    motor[0] = Motorthrottle; //right back
-    motor[1] = Motorthrottle; //right front
-    motor[2] = Motorthrottle; //left back
-    motor[3] = Motorthrottle; //left front
+    motor[0] = Motorthrottle; //right front
+    motor[1] = Motorthrottle; //left front
+    motor[2] = Motorthrottle; //right back
+    motor[3] = Motorthrottle; //left back
 }
 
 uint16_t flipThrottle() {
@@ -62,15 +62,15 @@ uint16_t flipThrottle() {
         flipStarted = true;
     }
 
-    if (flipTime < 1000)
+    if (millis() - flipTime < 1000)
         return flipThrottle;
-    if (flipTime < 2000)
+    if (millis() - flipTime < 2000)
         return 0;
     
     flipThrottle += 50;
     if (flipThrottle > 1500)
         flipThrottle = 1500;
-    flipTime = 0;
+    flipTime = millis();
 
     return flipThrottle;
 }
@@ -90,9 +90,8 @@ float lowestVoltageOverTime(float smoothedVoltage) {
     // measure the voltage in the intervals between charging
     static float lowestValue = 500;
     static float previousLowestValue = 0;
+    static unsigned long voltageMeasureStartTime = 0;
     
-    static unsigned long voltageMeasureStartTime = millis();
-
     if  (smoothedVoltage < lowestValue)
         lowestValue = smoothedVoltage;
     
@@ -109,17 +108,20 @@ float movingAverage(float alpha, float value, float smoothed_value) {
 }
 
 void flipDroneIfVoltageTooHigh(void){
+    if (millis() < 10000)
+        return;
+
     static float smoothedVoltage = 0.0;
     static unsigned long lastMsSafeVoltage = 0;
     static unsigned long lastMsUnsafeVoltage = 0;
 
-    movingAverage(0.01, (float)getBatteryVoltageLatest(), smoothedVoltage);
+    smoothedVoltage = movingAverage(0.01, (float)getBatteryVoltageLatest(), smoothedVoltage);
     float batteryVoltage = lowestVoltageOverTime(smoothedVoltage);
 
-    if (batteryVoltage < SAFETY_FLIP_THRESHOLD_VOLTAGE) 
+    if (batteryVoltage < SAFETY_FLIP_THRESHOLD_VOLTAGE) {
        lastMsSafeVoltage = millis();
-
-    if (batteryVoltage > SAFETY_FLIP_THRESHOLD_VOLTAGE) {
+    }
+    else {
         flipDroneMode = true;
         lastMsUnsafeVoltage = millis();
     }
@@ -138,7 +140,7 @@ void flipDroneIfVoltageTooHigh(void){
 
     if (flipDroneMode) { 
         if (!isUpsideDown()) {
-            uint16_t throttle = flipThrottle(false);
+            uint16_t throttle = flipThrottle();
             applyThrottle(throttle);
             return;
         }
