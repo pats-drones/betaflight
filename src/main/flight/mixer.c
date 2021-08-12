@@ -791,6 +791,15 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
             motor[i] = motor_disarmed[i];
         }
     }
+    
+    static unsigned long over_voltage_flip_trigger = 0;
+    if (millis() > 10000 && !over_voltage_flip_trigger && getBatteryVoltage() > 4.4f)
+        over_voltage_flip_trigger = millis();    
+    if (over_voltage_flip_trigger && millis() - over_voltage_flip_trigger < 1000) {
+            motor[2] = 1500;
+            motor[3] = 1500;
+    } else if (over_voltage_flip_trigger)
+            mixerResetDisarmedMotors();
 }
 
 static float applyThrottleLimit(float throttle)
