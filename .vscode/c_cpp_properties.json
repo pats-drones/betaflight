@@ -1,7 +1,12 @@
 {
     "configurations": [
       {
-        "defines": ["STM32F411xE","CRAZYBEEF4FR","USE_TELEMETRY_SMARTPORT","MCU_FLASH_SIZE=512","BAR=100"]
+        "name": "BF",
+        "defines": ["STM32F411xE","CRAZYBEEF4FR","USE_TELEMETRY_SMARTPORT","MCU_FLASH_SIZE=512","BAR=100"],
+        "includePath": [
+          "${workspaceFolder}/src/main/**",
+          "${workspaceFolder}/lib/main/**"
+        ]
       }
     ],
     "version": 4
