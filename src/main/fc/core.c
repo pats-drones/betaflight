@@ -800,7 +800,10 @@ bool processRx(timeUs_t currentTimeUs)
     
     
     if(rcData[AUX2] > PATS_SLEEP_MIN && rcData[AUX2] < PATS_SLEEP_MAX) {
-           //WOUTER DOE ER IS WAT MEE!
+        LED0_OFF;
+        LED1_OFF;
+        LED2_OFF;
+        systemBeep(false);
     }
 
     updateRSSI(currentTimeUs);
