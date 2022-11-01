@@ -797,6 +797,12 @@ bool processRx(timeUs_t currentTimeUs)
             dshot_is_reversed = false;
         }
 
+    
+    
+    if(rcData[AUX2] > PATS_SLEEP_MIN && rcData[AUX2] < PATS_SLEEP_MAX) {
+           //WOUTER DOE ER IS WAT MEE!
+    }
+
     updateRSSI(currentTimeUs);
 
     if (currentTimeUs > FAILSAFE_POWER_ON_DELAY_US && !failsafeIsMonitoring()) {
