@@ -7,6 +7,5 @@
         "regex": "c",
         "io.h": "c",
         "stdbool.h": "c",
-        "ledstrip.h": "c"
     }
 }

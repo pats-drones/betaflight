@@ -459,7 +459,7 @@ void disarm(flightLogDisarmReason_e reason)
 #else
         UNUSED(reason);
 #endif
-        // BEEP_OFF;
+        BEEP_OFF;
 #ifdef USE_DSHOT
         if (isMotorProtocolDshot() && flipOverAfterCrashActive && !featureIsEnabled(FEATURE_3D)) {
             dshotCommandWrite(ALL_MOTORS, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
@@ -757,8 +757,6 @@ bool isAirmodeActivated()
     return airmodeIsActivated;
 }
 
-#include "io/ledstrip.h"
-
 /*
  * processRx called from taskUpdateRxMain
  */
@@ -1044,7 +1042,7 @@ bool processRx(timeUs_t currentTimeUs)
         // increase frequency of attitude task to reduce drift when in angle or horizon mode
         rescheduleTask(TASK_ATTITUDE, TASK_PERIOD_HZ(500));
     } else {
-        // LED1_OFF;
+        LED1_OFF;
         rescheduleTask(TASK_ATTITUDE, TASK_PERIOD_HZ(100));
     }
 
