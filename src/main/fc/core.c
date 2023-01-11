@@ -764,77 +764,18 @@ bool isAirmodeActivated()
  */
 bool processRx(timeUs_t currentTimeUs)
 {
-    static uint32_t tick = 0;
-
-    // //ledStripDisable(void);
     static bool hard_shutdown = false;
 
-    tick++;
-    // debug[0] = tick / 100000;
-    // debug[1] = tick++ % 200000 > 100000;
-    debug[1] = currentTimeUs / 1000L;
+    if(rcData[AUX2] > PATS_SLEEP_MIN && rcData[AUX2] < PATS_SLEEP_MAX) {
+        hard_shutdown = true;
+    }
 
-    if (currentTimeUs > (3 * 1000L )) {
-        debug[3] = rcData[AUX2];
-        if(rcData[AUX2] > PATS_SLEEP_MIN && rcData[AUX2] < PATS_SLEEP_MAX) {
-            hard_shutdown = true;
-            tick = 0;
-        }
-        else {
-            if (tick > 20000)
-                hard_shutdown = false;
-        }
-
-        if (hard_shutdown) {
-            systemBeep(false);
-            // return false;
-                debug[2] = 0;
-
-        }
-        else {
-            systemBeep(true);
-            debug[2] = 1;
-        }
-            
-        
-        debug[0] = tick / 100000;
-
+    if (hard_shutdown) {
+        systemBeep(false);
     }
     else {
         systemBeep(true);
-            debug[2] = 1;
     }
-
-    // setLedProfile(debug[0]);
-
-    // int ticktock = 0;
-    // if (debug[1]) {
-    //     // systemBeep(true);    
-    //     LED0_OFF;
-    //     LED1_OFF;
-    //     LED2_OFF;
-    //     debug[2] = 123;
-
-    //     if (!ticktock) {
-    //         ticktock = 1;
-    //         beeperSilence();
-    //     }
-    // }
-    // else {
-    //     LED0_ON;
-    //     LED1_ON;
-    //     LED2_ON;
-    //     // systemBeep(false);
-    //     debug[2] = 456;
-
-    //     if (ticktock) {
-    //         ticktock = 0;
-    //         beeper(BEEPER_ARMED);
-    //     }
-    // }
-
-    // return false;
-        // systemBeep(true);
 
     static bool armedBeeperOn = false;
 #ifdef USE_TELEMETRY
@@ -869,23 +810,6 @@ bool processRx(timeUs_t currentTimeUs)
             dshotCommandWrite(ALL_MOTORS, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
             dshot_is_reversed = false;
         }
-
-
-    
-    // if (debug[1]) {
-    //     LED0_OFF;
-    //     LED1_OFF;
-    //     LED2_OFF;
-    //     debug[2] = 123;
-    // }
-    // else {
-    //     LED0_ON;
-    //     LED1_ON;
-    //     LED2_ON;
-    //     debug[2] = 456;
-    // }
-    
-
 
     updateRSSI(currentTimeUs);
 
