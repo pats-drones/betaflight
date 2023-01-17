@@ -770,8 +770,7 @@ bool processRx(timeUs_t currentTimeUs)
 
     if (hard_shutdown) {
         systemBeep(false);
-    }
-    else {
+    } else {
         systemBeep(true);
     }
 
