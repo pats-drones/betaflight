@@ -757,6 +757,7 @@ bool isAirmodeActivated()
     return airmodeIsActivated;
 }
 
+
 /*
  * processRx called from taskUpdateRxMain
  */

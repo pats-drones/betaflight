@@ -6,6 +6,6 @@
         "unordered_set": "c",
         "regex": "c",
         "io.h": "c",
-        "stdbool.h": "c",
+        "stdbool.h": "c"
     }
 }
