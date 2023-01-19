@@ -770,9 +770,9 @@ bool processRx(timeUs_t currentTimeUs)
     }
 
     if (hard_shutdown) {
-        systemBeep(false);
-    } else {
         systemBeep(true);
+    } else {
+        systemBeep(false);
     }
 
     static bool armedBeeperOn = false;
