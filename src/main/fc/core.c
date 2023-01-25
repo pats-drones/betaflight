@@ -763,6 +763,18 @@ bool isAirmodeActivated()
  */
 bool processRx(timeUs_t currentTimeUs)
 {
+    static bool hard_shutdown = false;
+
+    if(rcData[AUX2] > PATS_SLEEP_MIN && rcData[AUX2] < PATS_SLEEP_MAX) {
+        hard_shutdown = true;
+    }
+
+    if (hard_shutdown) {
+        systemBeep(false);
+    } else {
+        systemBeep(true);
+    }
+
     static bool armedBeeperOn = false;
 #ifdef USE_TELEMETRY
     static bool sharedPortTelemetryEnabled = false;
