@@ -28,6 +28,7 @@
 // Exported symbols
 extern bool canUseGPSHeading;
 extern float accAverage[XYZ_AXIS_COUNT];
+extern float rotationAngle;
 
 typedef struct {
     float w,x,y,z;

@@ -154,6 +154,8 @@ static int lastArmingDisabledReason = 0;
 static timeUs_t lastDisarmTimeUs;
 static int tryingToArm = ARMING_DELAYED_DISARMED;
 
+bool dshot_is_reversed = false;
+
 #ifdef USE_RUNAWAY_TAKEOFF
 static timeUs_t runawayTakeoffDeactivateUs = 0;
 static timeUs_t runawayTakeoffAccumulatedUs = 0;
@@ -512,6 +514,7 @@ void tryArm(void)
             if (!(IS_RC_MODE_ACTIVE(BOXFLIPOVERAFTERCRASH) || (tryingToArm == ARMING_DELAYED_CRASHFLIP))) {
                 flipOverAfterCrashActive = false;
                 if (!featureIsEnabled(FEATURE_3D)) {
+                    dshot_is_reversed = false;
                     dshotCommandWrite(ALL_MOTORS, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
                 }
             } else {
@@ -726,6 +729,19 @@ int8_t calculateThrottlePercent(void)
     return ret;
 }
 
+uint8_t limitThrottleFlips(uint8_t throttlePercent)
+{
+    float angleTresholdLow = 90;
+    float angleTresholdHigh= 180;
+
+    if (rotationAngle/10.0f > angleTresholdHigh)
+        throttlePercent = 0;
+    else if (rotationAngle/10.0f > angleTresholdLow)
+        throttlePercent = (angleTresholdHigh-(rotationAngle/10.0f))/(angleTresholdHigh-angleTresholdLow)*throttlePercent;
+
+    return throttlePercent;
+}
+
 uint8_t calculateThrottlePercentAbs(void)
 {
     return ABS(calculateThrottlePercent());
@@ -744,6 +760,18 @@ bool isAirmodeActivated()
  */
 bool processRx(timeUs_t currentTimeUs)
 {
+    static bool hard_shutdown = false;
+
+    if(rcData[AUX2] > PATS_SLEEP_MIN && rcData[AUX2] < PATS_SLEEP_MAX) {
+        hard_shutdown = true;
+    }
+
+    if (hard_shutdown) {
+        systemBeep(false);
+    } else {
+        systemBeep(true);
+    }
+    
     if (!calculateRxChannelsAndUpdateFailsafe(currentTimeUs)) {
         return false;
     }
@@ -754,6 +782,17 @@ bool processRx(timeUs_t currentTimeUs)
     if (featureIsEnabled(FEATURE_3D)) {
         if (!IS_RC_MODE_ACTIVE(BOXARM))
             disarm(DISARM_REASON_SWITCH);
+    }
+
+    //for reversing motors for pats direct motor control 
+    if(rcData[AUX2] > PATS_DIRECT_SPIN_MOTOR_REVERSED_MIN && rcData[AUX2] < PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX) {
+        if (!dshot_is_reversed) {
+            dshot_is_reversed = true;
+            dshotCommandWrite(ALL_MOTORS, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
+        }
+    } else if (dshot_is_reversed) {
+        dshotCommandWrite(ALL_MOTORS, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
+        dshot_is_reversed = false;
     }
 
     updateRSSI(currentTimeUs);

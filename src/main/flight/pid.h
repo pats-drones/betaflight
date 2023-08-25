@@ -308,7 +308,8 @@ typedef struct pidRuntime_s {
     float crashLimitYaw;
     float itermLimit;
     bool itermRotation;
-    bool zeroThrottleItermReset;
+    uint16_t zeroThrottleItermReset;
+    float yaw_angle;
     bool levelRaceMode;
     float tpaFactor;
 
@@ -438,6 +439,7 @@ void applyAbsoluteControl(const int axis, const float gyroRate, float *currentPi
 void rotateItermAndAxisError();
 float pidLevel(int axis, const pidProfile_t *pidProfile,
     const rollAndPitchTrims_t *angleTrim, float currentPidSetpoint);
+float pidLevelYaw(int axis, float currentPidSetpoint);
 float calcHorizonLevelStrength(void);
 #endif
 void dynLpfDTermUpdate(float throttle);
@@ -449,4 +451,5 @@ float pidGetFeedforwardBoostFactor();
 float pidGetFeedforwardSmoothFactor();
 float pidGetFeedforwardJitterFactor();
 float pidGetFeedforwardTransitionFactor();
+float getYawAngle(void);
 float dynLpfCutoffFreq(float throttle, uint16_t dynLpfMin, uint16_t dynLpfMax, uint8_t expo);

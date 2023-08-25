@@ -55,6 +55,8 @@
 #include "pg/pg.h"
 #include "pg/pg_ids.h"
 
+#include "rx/rx.h"
+
 #include "sensors/acceleration.h"
 #include "sensors/battery.h"
 #include "sensors/gyro.h"
@@ -289,6 +291,8 @@ void pidResetIterm(void)
         axisError[axis] = 0.0f;
 #endif
     }
+    if ((rcData[AUX2]>PATS_YAW_RESET_MIN && rcData[AUX2]<PATS_YAW_RESET_MAX) || !ARMING_FLAG(ARMED))
+        pidRuntime.yaw_angle = -attitude.values.yaw / 10.0f;
 }
 
 void pidUpdateTpaFactor(float throttle)
@@ -439,7 +443,7 @@ STATIC_UNIT_TESTED FAST_CODE_NOINLINE float pidLevel(int axis, const pidProfile_
     angle += gpsRescueAngle[axis] / 100; // ANGLE IS IN CENTIDEGREES
 #endif
     angle = constrainf(angle, -pidProfile->levelAngleLimit, pidProfile->levelAngleLimit);
-    const float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
+    const float errorAngle = -((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
     if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(GPS_RESCUE_MODE)) {
         // ANGLE mode - control is angle based
         currentPidSetpoint = errorAngle * pidRuntime.levelGain;
@@ -449,6 +453,30 @@ STATIC_UNIT_TESTED FAST_CODE_NOINLINE float pidLevel(int axis, const pidProfile_
         const float horizonLevelStrength = calcHorizonLevelStrength();
         currentPidSetpoint = currentPidSetpoint + (errorAngle * pidRuntime.horizonGain * horizonLevelStrength);
     }
+    return currentPidSetpoint;
+}
+
+STATIC_UNIT_TESTED float pidLevelYaw(int axis, float currentPidSetpoint) {
+    // calculate error angle and limit the angle to the max inclination
+    // rcDeflection is in range [-1.0, 1.0]
+    pidRuntime.yaw_angle +=getRcDeflection(axis);
+
+    if (pidRuntime.yaw_angle < -180)
+        pidRuntime.yaw_angle += 360;
+    else if (pidRuntime.yaw_angle > 180)
+        pidRuntime.yaw_angle -= 360;
+
+    float errorAngle = pidRuntime.yaw_angle - (-attitude.raw[axis] / 10.0f);
+    //FIXME: this can still create overflows:
+    if (errorAngle < -180)
+        errorAngle += 360;
+    else if (errorAngle > 180)
+        errorAngle -= 360;
+
+    if (FLIGHT_MODE(ANGLE_MODE) ) {
+        // ANGLE mode - control is angle based
+        currentPidSetpoint = errorAngle * pidRuntime.levelGain * 0.1;
+    } 
     return currentPidSetpoint;
 }
 
@@ -961,9 +989,12 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
             FALLTHROUGH;
         case LEVEL_MODE_RP:
             if (axis == FD_YAW) {
-                break;
-            }
-            currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint);
+                if (rcData[AUX2] > PATS_HEADLESS_DISABLE_MIN && rcData[AUX2] < PATS_HEADLESS_DISABLE_MAX) // using a small alteration on the mode switch turn on/off headless mode
+        		    currentPidSetpoint = pidLevelYaw(axis, currentPidSetpoint);
+                else
+                    pidData[FD_YAW].I = 0.0f;
+	        } else
+	            currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint);
         }
 #endif
 
@@ -1197,7 +1228,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
 
     // Disable PID control if at zero throttle or if gyro overflow detected
     // This may look very innefficient, but it is done on purpose to always show real CPU usage as in flight
-    if (!pidRuntime.pidStabilisationEnabled || gyroOverflowDetected()) {
+    if (!pidRuntime.pidStabilisationEnabled || gyroOverflowDetected() || (rcData[AUX2]>PID_LOOP_DISABLED_MIN && rcData[AUX2]<PID_LOOP_DISABLED_MAX)) {
         for (int axis = FD_ROLL; axis <= FD_YAW; ++axis) {
             pidData[axis].P = 0;
             pidData[axis].I = 0;
@@ -1208,6 +1239,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         }
     } else if (pidRuntime.zeroThrottleItermReset) {
         pidResetIterm();
+        pidRuntime.zeroThrottleItermReset--;
     }
 }
 
@@ -1288,7 +1320,9 @@ float dynLpfCutoffFreq(float throttle, uint16_t dynLpfMin, uint16_t dynLpfMax, u
 
 void pidSetItermReset(bool enabled)
 {
-    pidRuntime.zeroThrottleItermReset = enabled;
+    if (enabled) {
+        pidRuntime.zeroThrottleItermReset = pidRuntime.pidFrequency/2;;
+    }
 }
 
 float pidGetPreviousSetpoint(int axis)
@@ -1304,4 +1338,9 @@ float pidGetDT()
 float pidGetPidFrequency()
 {
     return pidRuntime.pidFrequency;
+}
+
+float getYawAngle(void)
+{
+    return pidRuntime.yaw_angle;
 }

@@ -573,10 +573,10 @@ static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
             if (failsafeIsActive()) {
                 warningFlags |= 1 << WARNING_FAILSAFE;
             }
-            if (!ARMING_FLAG(ARMED) && isArmingDisabled()) {
+            if (ARMING_FLAG(ARMED) && isArmingDisabled() && rxIsReceivingSignal()&& !failsafeIsActive()) {
                 warningFlags |= 1 << WARNING_ARMING_DISABLED;
             }
-            if (isFlipOverAfterCrashActive()) {
+            if (isFlipOverAfterCrashActive() || (rcData[AUX2] > PATS_DIRECT_SPIN_MOTOR_REVERSED_MIN && rcData[AUX2] < PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX)) {
                 warningFlags |= 1 << WARNING_CRASH_FLIP_ACTIVE;
             }
         }
@@ -607,7 +607,7 @@ static void applyLedWarningLayer(bool updateNow, timeUs_t *timer)
         }
     } else {
         if (isBeeperOn()) {
-            warningColor = &hsv[ledStripConfig()->ledstrip_visual_beeper_color];
+            // warningColor = &hsv[ledStripConfig()->ledstrip_visual_beeper_color];
         }
     }
 
