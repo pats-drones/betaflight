@@ -1212,7 +1212,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
 
     // Disable PID control if at zero throttle or if gyro overflow detected
     // This may look very innefficient, but it is done on purpose to always show real CPU usage as in flight
-    if (!pidRuntime.pidStabilisationEnabled || gyroOverflowDetected()) {
+    if (!pidRuntime.pidStabilisationEnabled || gyroOverflowDetected() || (rcData[AUX2]>PID_LOOP_DISABLED_MIN && rcData[AUX2]<PID_LOOP_DISABLED_MAX)) {
         for (int axis = FD_ROLL; axis <= FD_YAW; ++axis) {
             pidData[axis].P = 0;
             pidData[axis].I = 0;
@@ -1223,6 +1223,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
         }
     } else if (pidRuntime.zeroThrottleItermReset) {
         pidResetIterm();
+        pidRuntime.zeroThrottleItermReset--;
     }
 }
 
@@ -1303,7 +1304,9 @@ float dynLpfCutoffFreq(float throttle, uint16_t dynLpfMin, uint16_t dynLpfMax, u
 
 void pidSetItermReset(bool enabled)
 {
-    pidRuntime.zeroThrottleItermReset = enabled;
+    if (enabled) {
+        pidRuntime.zeroThrottleItermReset = pidRuntime.pidFrequency/2;
+    }
 }
 
 float pidGetPreviousSetpoint(int axis)
