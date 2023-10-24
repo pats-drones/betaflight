@@ -119,7 +119,7 @@ void beeperInit(const beeperDevConfig_t *config)
             IOInit(beeperIO, OWNER_BEEPER, 0);
             IOConfigGPIO(beeperIO, config->isOpenDrain ? IOCFG_OUT_OD : IOCFG_OUT_PP);
         }
-        systemBeep(false);
+        systemBeep(true);
     }
 #ifdef USE_PWM_OUTPUT
     else {
