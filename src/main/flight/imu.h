@@ -27,6 +27,7 @@
 
 // Exported symbols
 extern bool canUseGPSHeading;
+extern float rotationAngle;
 
 typedef struct {
     float w,x,y,z;

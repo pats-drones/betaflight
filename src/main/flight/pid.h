@@ -313,7 +313,7 @@ typedef struct pidRuntime_s {
     float crashLimitYaw;
     float itermLimit;
     bool itermRotation;
-    bool zeroThrottleItermReset;
+    float yaw_angle;
     bool levelRaceMode;
     float tpaFactor;
 
@@ -457,4 +457,5 @@ float pidGetFeedforwardBoostFactor();
 float pidGetFeedforwardSmoothFactor();
 float pidGetFeedforwardJitterFactor();
 float pidGetFeedforwardTransitionFactor();
+float getYawAngle(void);
 float dynLpfCutoffFreq(float throttle, uint16_t dynLpfMin, uint16_t dynLpfMax, uint8_t expo);

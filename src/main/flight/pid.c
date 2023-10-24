@@ -1286,3 +1286,8 @@ float pidGetPidFrequency(void)
 {
     return pidRuntime.pidFrequency;
 }
+
+float getYawAngle(void)
+{
+    return pidRuntime.yaw_angle;
+}
