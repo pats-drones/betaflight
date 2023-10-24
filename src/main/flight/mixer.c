@@ -39,6 +39,8 @@
 #include "drivers/io.h"
 #include "drivers/motor.h"
 #include "drivers/time.h"
+#include "drivers/serial_usb_vcp.h" // FOR PATS OVERCHARGE FLIP
+#include "drivers/dshot_command.h" // FOR PATS OVERCHARGE FLIP
 
 #include "fc/controlrate_profile.h"
 #include "fc/core.h"
@@ -380,6 +382,26 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
         for (int i = 0; i < mixerRuntime.motorCount; i++) {
             motor[i] = motor_disarmed[i];
         }
+    }
+
+    static unsigned long over_voltage_flip_trigger = 0;
+    if (millis() > 10000 && !over_voltage_flip_trigger && getBatteryAverageCellVoltage() > 440 && !usbVcpIsConnected()) {
+        over_voltage_flip_trigger = millis();
+        dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
+        dshotCommandWrite(3, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
+    }
+    if (over_voltage_flip_trigger && millis() - over_voltage_flip_trigger < 700) {
+            const int flip_throttle = 900;
+            motor[0] = flip_throttle;
+            motor[2] = flip_throttle;
+            motor[1] = flip_throttle;
+            motor[3] = flip_throttle;
+    } else if (over_voltage_flip_trigger) {
+            dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
+            dshotCommandWrite(3, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
+            mixerResetDisarmedMotors();
+            if (millis() - over_voltage_flip_trigger > 60000 && getBatteryAverageCellVoltage() > 440 && !usbVcpIsConnected())
+                over_voltage_flip_trigger = 0; // retry to flip again...
     }
 }
 
