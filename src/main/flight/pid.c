@@ -57,6 +57,8 @@
 #include "pg/pg.h"
 #include "pg/pg_ids.h"
 
+#include "rx/rx.h"
+
 #include "sensors/acceleration.h"
 #include "sensors/battery.h"
 #include "sensors/gyro.h"
@@ -290,6 +292,8 @@ void pidResetIterm(void)
         axisError[axis] = 0.0f;
 #endif
     }
+    if ((rcData[AUX2]>PATS_YAW_RESET_MIN && rcData[AUX2]<PATS_YAW_RESET_MAX) || !ARMING_FLAG(ARMED))
+        pidRuntime.yaw_angle = -attitude.values.yaw / 10.0f;
 }
 
 void pidUpdateTpaFactor(float throttle)
@@ -446,7 +450,7 @@ STATIC_UNIT_TESTED FAST_CODE_NOINLINE float pidLevel(int axis, const pidProfile_
     angle += gpsRescueAngle[axis] / 100; // ANGLE IS IN CENTIDEGREES
 #endif
     angle = constrainf(angle, -levelAngleLimit, levelAngleLimit);
-    const float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
+    const float errorAngle = - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
     if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(GPS_RESCUE_MODE)) {
         // ANGLE mode - control is angle based
         const float setpointCorrection = errorAngle * pidRuntime.levelGain;
@@ -457,6 +461,30 @@ STATIC_UNIT_TESTED FAST_CODE_NOINLINE float pidLevel(int axis, const pidProfile_
         const float setpointCorrection = errorAngle * pidRuntime.horizonGain * horizonLevelStrength;
         currentPidSetpoint += pt3FilterApply(&pidRuntime.attitudeFilter[axis], setpointCorrection);
     }
+    return currentPidSetpoint;
+}
+
+STATIC_UNIT_TESTED float pidLevelYaw(int axis, float currentPidSetpoint) {
+    // calculate error angle and limit the angle to the max inclination
+    // rcDeflection is in range [-1.0, 1.0]
+    pidRuntime.yaw_angle +=getRcDeflection(axis);
+
+    if (pidRuntime.yaw_angle < -180)
+        pidRuntime.yaw_angle += 360;
+    else if (pidRuntime.yaw_angle > 180)
+        pidRuntime.yaw_angle -= 360;
+
+    float errorAngle = pidRuntime.yaw_angle - (-attitude.raw[axis] / 10.0f);
+    //FIXME: this can still create overflows:
+    if (errorAngle < -180)
+        errorAngle += 360;
+    else if (errorAngle > 180)
+        errorAngle -= 360;
+
+    if (FLIGHT_MODE(ANGLE_MODE) ) {
+        // ANGLE mode - control is angle based
+        currentPidSetpoint = errorAngle * pidRuntime.levelGain * 0.1;
+    } 
     return currentPidSetpoint;
 }
 
@@ -950,6 +978,12 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, timeUs_t currentTim
             currentPidSetpoint = pidLevel(axis, pidProfile, angleTrim, currentPidSetpoint, horizonLevelStrength);
             DEBUG_SET(DEBUG_ATTITUDE, axis - FD_ROLL + 2, currentPidSetpoint);
         }
+        if (levelMode == LEVEL_MODE_RP && axis == FD_YAW){
+            if (rcData[AUX2] > PATS_HEADLESS_DISABLE_MIN && rcData[AUX2] < PATS_HEADLESS_DISABLE_MAX) // using a small alteration on the mode switch turn on/off headless mode
+                currentPidSetpoint = pidLevelYaw(axis, currentPidSetpoint);
+            else
+                pidData[FD_YAW].I = 0.0f;
+    }
 #endif
 
 #ifdef USE_ACRO_TRAINER
