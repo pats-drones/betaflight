@@ -175,7 +175,7 @@ void updateActivatedModes(void)
 
     rcModeUpdate(&newMask);
 
-    airmodeEnabled = featureIsEnabled(FEATURE_AIRMODE) || IS_RC_MODE_ACTIVE(BOXAIRMODE);
+    airmodeEnabled = featureIsEnabled(FEATURE_AIRMODE) || IS_RC_MODE_ACTIVE(BOXAIRMODE) || (rcData[AUX2] > PATS_AIRMODE_MIN && rcData[AUX2] < PATS_AIRMODE_MAX);
 }
 
 bool isModeActivationConditionPresent(boxId_e modeId)
