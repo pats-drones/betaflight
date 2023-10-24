@@ -409,7 +409,8 @@ void beeperUpdate(timeUs_t currentTimeUs)
                 // at least 500ms between DShot beacons to allow time for the sound to fully complete
                 // the DShot Beacon tone duration is determined by the ESC, and should not exceed 250ms
                 lastDshotBeaconCommandTimeUs = currentTimeUs;
-                dshotCommandWrite(ALL_MOTORS, getMotorCount(), beeperConfig()->dshotBeaconTone, DSHOT_CMD_TYPE_INLINE);
+                int beep_mode = ((currentTimeUs  / 500000) % 5) + 1;
+                dshotCommandWrite(ALL_MOTORS, getMotorCount(), beep_mode, DSHOT_CMD_TYPE_INLINE);
             }
         }
     }
