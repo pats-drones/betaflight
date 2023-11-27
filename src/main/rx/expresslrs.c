@@ -406,7 +406,7 @@ static void expressLrsSendTelemResp(void)
     if (nextTelemetryType == ELRS_TELEMETRY_TYPE_LINK || !isTelemetrySenderActive()) {
         otaPkt.tlm_dl.type = ELRS_TELEMETRY_TYPE_LINK;
         otaPkt.tlm_dl.ul_link_stats.uplink_RSSI_1 = receiver.rssiFiltered > 0 ? 0 : -receiver.rssiFiltered; 
-        otaPkt.tlm_dl.ul_link_stats.uplink_RSSI_2 = 0; //diversity not supported
+        otaPkt.tlm_dl.ul_link_stats.bf_version = FC_VERSION_MINOR | (FC_VERSION_MAJOR << 4);
         otaPkt.tlm_dl.ul_link_stats.antenna = 0;
         otaPkt.tlm_dl.ul_link_stats.modelMatch = connectionHasModelMatch;
         otaPkt.tlm_dl.ul_link_stats.lq = receiver.uplinkLQ;

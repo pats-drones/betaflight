@@ -187,7 +187,7 @@ typedef struct elrsOtaPacket_s {
                 struct {
                     uint8_t uplink_RSSI_1 : 7,
                             antenna : 1;
-                    uint8_t uplink_RSSI_2 : 7,
+                    uint8_t bf_version : 7,
                             modelMatch : 1;
                     uint8_t lq : 7,
                             mspConfirm : 1;
