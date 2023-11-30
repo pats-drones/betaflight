@@ -1,3 +1,7 @@
+make STM32F411 EXTRA_FLAGS="-D'BUILD_KEY=ec13320be6dfb3454403e841b0669684' -D'RELEASE_NAME=4.4.2' -D'BOARD_NAME=JORNBOARD2310' -D'MANUFACTURER_ID=PATS' -DCLOUD_BUILD -DRX_CHANNELS_AETR -D'RX_EXPRESSLRS_SPI_BUSY_PIN=PA13' -D'RX_EXPRESSLRS_SPI_RESET_PIN=PA8' -D'RX_EXPRESSLRS_TIMER_INSTANCE=TIM3' -D'RX_SPI_BIND=PB2' -D'RX_SPI_CS=PA15' -D'RX_SPI_DEFAULT_PROTOCOL=RX_SPI_EXPRESSLRS' -D'RX_SPI_EXTI=PC14' -D'RX_SPI_LED=PB9' -DUSE_ACC -DUSE_ACC_SPI_ICM20689 -DUSE_ACC_SPI_ICM42688P -DUSE_ACC_SPI_MPU6000 -DUSE_ACCGYRO_BMI270 -DUSE_DSHOT -DUSE_FLASH -DUSE_FLASH_W25Q128FV -DUSE_GYRO -DUSE_GYRO_SPI_ICM20689 -DUSE_GYRO_SPI_ICM42688P -DUSE_GYRO_SPI_MPU6000 -DUSE_LED_STRIP -DUSE_MAX7456 -DUSE_OSD -DUSE_OSD_HD -DUSE_OSD_SD -DUSE_PINIO -DUSE_RX_EXPRESSLRS -DUSE_RX_EXPRESSLRS_TELEMETRY -DUSE_RX_SPI -DUSE_RX_SX1280 -DUSE_SERIALRX -DUSE_SERIALRX_CRSF -DUSE_SERIALRX_DEFAULT -DUSE_SERIALRX_GHST -DUSE_SERIALRX_SBUS -DUSE_TELEMETRY -DUSE_TELEMETRY_CRSF -DUSE_TELEMETRY_GHST -DUSE_VTX"
+
+---
+
 ![Betaflight](docs/assets/images/bf_logo.png)
 
 [![Latest version](https://img.shields.io/github/v/release/betaflight/betaflight)](https://github.com/betaflight/betaflight/releases) [![Build](https://img.shields.io/github/actions/workflow/status/betaflight/betaflight/nightly.yml?branch=master)](https://github.com/betaflight/betaflight/actions/workflows/nightly.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![Join us on Discord!](https://img.shields.io/discord/868013470023548938)](https://discord.gg/n4E6ak4u3c)
