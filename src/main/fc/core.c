@@ -786,7 +786,7 @@ bool processRx(timeUs_t currentTimeUs)
         if (!IS_RC_MODE_ACTIVE(BOXARM))
             disarm(DISARM_REASON_SWITCH);
     }
-
+#ifdef USE_DSHOT
     //for reversing motors for pats direct motor control 
     if(rcData[AUX2] > PATS_DIRECT_SPIN_MOTOR_REVERSED_MIN && rcData[AUX2] < PATS_DIRECT_SPIN_MOTOR_REVERSED_MAX) {
         if (!dshot_is_reversed) {
@@ -797,7 +797,7 @@ bool processRx(timeUs_t currentTimeUs)
         dshotCommandWrite(ALL_MOTORS, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
         dshot_is_reversed = false;
     }
-
+#endif
     updateRSSI(currentTimeUs);
 
     if (currentTimeUs > FAILSAFE_POWER_ON_DELAY_US && !failsafeIsMonitoring()) {

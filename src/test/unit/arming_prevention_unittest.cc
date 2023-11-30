@@ -96,6 +96,8 @@ extern "C" {
     acc_t acc = {};
     bool mockIsUpright = false;
     uint8_t activePidLoopDenom = 1;
+    float rotationAngle = 12.f;
+    uint8_t getMotorCount(void) {return 4;}
 
     float getGpsDataIntervalSeconds(void) { return 0.1f; }
     void pt1FilterUpdateCutoff(pt1Filter_t *filter, float k) { filter->k = k; }
