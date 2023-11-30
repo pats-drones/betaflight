@@ -429,6 +429,9 @@ rx_spi_expresslrs_unittest_DEFINES := \
 		USE_RX_EXPRESSLRS= \
 		USE_RX_SX1280= \
 		USE_RX_SX127X= \
+		FC_VERSION_MAJOR=4\
+		FC_VERSION_MINOR=4\
+		FC_VERSION_PATCH_LEVEL=2\
 
 rx_spi_expresslrs_telemetry_unittest_SRC := \
 		$(USER_DIR)/rx/crsf.c \

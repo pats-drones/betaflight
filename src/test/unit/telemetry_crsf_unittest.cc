@@ -79,6 +79,7 @@ extern "C" {
     PG_REGISTER(systemConfig_t, systemConfig, PG_SYSTEM_CONFIG, 0);
     PG_REGISTER(rxConfig_t, rxConfig, PG_RX_CONFIG, 0);
     PG_REGISTER(accelerometerConfig_t, accelerometerConfig, PG_ACCELEROMETER_CONFIG, 0);
+    PG_REGISTER(pilotConfig_t, pilotConfig, PG_PILOT_CONFIG, 0);
 }
 
 #include "unittest_macros.h"
@@ -216,6 +217,29 @@ TEST(TelemetryCrsfTest, TestAttitude)
     yaw = frame[7] << 8 | frame[8];
     EXPECT_EQ(-31398, yaw);
     EXPECT_EQ(crfsCrc(frame, frameLen), frame[9]);
+}
+
+
+TEST(TelemetryCrsfTest, TestPats)
+{
+    uint8_t frame[CRSF_FRAME_SIZE_MAX];
+
+    int frameLen = getCrsfFrame(frame, CRSF_FRAMETYPE_PATS);
+    EXPECT_EQ(CRSF_FRAME_PATS_PAYLOAD_SIZE + FRAME_HEADER_FOOTER_LEN, frameLen);
+    EXPECT_EQ(CRSF_SYNC_BYTE, frame[0]); // address
+    EXPECT_EQ(9, frame[1]); // length
+    EXPECT_EQ(0x1F, frame[2]); // type
+    uint16_t bf_versioning = static_cast<int16_t>(frame[3] & 0x1F) << 8 | frame[4];
+    // int bf_settings = (bf_versioning & 0xE000) >> 13;
+    // EXPECT_EQ(3, bf_settings);
+    int bf_major = (bf_versioning & 0x1C00) >> 10;
+    EXPECT_EQ(4, bf_major);
+    int bf_minor = (bf_versioning & 0x3E0) >> 5;
+    EXPECT_EQ(4, bf_minor);
+    int bf_patch = bf_versioning & 0x1F;
+    EXPECT_EQ(2, bf_patch);
+    std::cout << "bf_versioning: " << bf_versioning << " bf_major: " << bf_major << " bf_minor: " << bf_minor << " bf_patch: " << bf_patch << std::endl;
+    EXPECT_EQ(crfsCrc(frame, frameLen), frame[10]);
 }
 
 TEST(TelemetryCrsfTest, TestFlightMode)

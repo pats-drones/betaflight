@@ -335,6 +335,17 @@ void crsfFrameAttitude(sbuf_t *dst)
      sbufWriteU16BigEndian(dst, decidegrees2Radians10000(attitude.values.yaw));
 }
 
+// fill dst buffer with crsf-pats telemetry frame
+void crsfFramePATS(sbuf_t *dst)
+{
+    #define BF_SETTINGS 3
+    sbufWriteU8(dst, CRSF_FRAME_PATS_PAYLOAD_SIZE + CRSF_FRAME_LENGTH_TYPE_CRC);
+    sbufWriteU8(dst, CRSF_FRAMETYPE_PATS);
+    sbufWriteU16BigEndian(dst, FC_VERSION_PATCH_LEVEL | FC_VERSION_MINOR << 5 | FC_VERSION_MAJOR << 10 | BF_SETTINGS << 13);
+    sbufWriteU32BigEndian(dst, *(uint32_t *)pilotConfig()->craftName);
+    sbufWriteU8(dst, getArmingDisableFlags());
+}
+
 /*
 0x21 Flight mode text based
 Payload:
@@ -579,6 +590,7 @@ static void crsfFrameDisplayPortClear(sbuf_t *dst)
 typedef enum {
     CRSF_FRAME_START_INDEX = 0,
     CRSF_FRAME_ATTITUDE_INDEX = CRSF_FRAME_START_INDEX,
+    CRSF_FRAME_PATS_INDEX,
     CRSF_FRAME_BATTERY_SENSOR_INDEX,
     CRSF_FRAME_FLIGHT_MODE_INDEX,
     CRSF_FRAME_GPS_INDEX,
@@ -632,6 +644,11 @@ static void processCrsf(void)
     if (currentSchedule & BIT(CRSF_FRAME_ATTITUDE_INDEX)) {
         crsfInitializeFrame(dst);
         crsfFrameAttitude(dst);
+        crsfFinalize(dst);
+    }
+    if (currentSchedule & BIT(CRSF_FRAME_PATS_INDEX)) {
+        crsfInitializeFrame(dst);
+        crsfFramePATS(dst);
         crsfFinalize(dst);
     }
     if (currentSchedule & BIT(CRSF_FRAME_BATTERY_SENSOR_INDEX)) {
@@ -688,6 +705,7 @@ void initCrsfTelemetry(void)
     if (sensors(SENSOR_ACC) && telemetryIsSensorEnabled(SENSOR_PITCH | SENSOR_ROLL | SENSOR_HEADING)) {
         crsfSchedule[index++] = BIT(CRSF_FRAME_ATTITUDE_INDEX);
     }
+    crsfSchedule[index++] = BIT(CRSF_FRAME_PATS_INDEX);
     if ((isBatteryVoltageConfigured() && telemetryIsSensorEnabled(SENSOR_VOLTAGE))
         || (isAmperageConfigured() && telemetryIsSensorEnabled(SENSOR_CURRENT | SENSOR_FUEL))) {
         crsfSchedule[index++] = BIT(CRSF_FRAME_BATTERY_SENSOR_INDEX);
@@ -875,6 +893,9 @@ int getCrsfFrame(uint8_t *frame, crsfFrameType_e frameType)
     default:
     case CRSF_FRAMETYPE_ATTITUDE:
         crsfFrameAttitude(sbuf);
+        break;
+    case CRSF_FRAMETYPE_PATS:
+        crsfFramePATS(sbuf);
         break;
     case CRSF_FRAMETYPE_BATTERY_SENSOR:
         crsfFrameBatterySensor(sbuf);
