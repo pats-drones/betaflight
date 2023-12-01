@@ -107,6 +107,7 @@
 #include "pg/rcdevice.h"
 #include "pg/stats.h"
 #include "pg/board.h"
+#include "pg/pats.h"
 
 #include "rx/a7105_flysky.h"
 #include "rx/cc2500_frsky_common.h"
@@ -653,6 +654,7 @@ const lookupTableEntry_t lookupTables[] = {
 #undef LOOKUP_TABLE_ENTRY
 
 const clivalue_t valueTable[] = {
+    { "pats_config_version",        VAR_UINT8  | MASTER_VALUE, .config.minmaxUnsigned = { 0, UINT8_MAX }, PG_PATS_CONFIG, offsetof(patsConfig_t, configVersion) },
 // PG_GYRO_CONFIG
     { PARAM_NAME_GYRO_HARDWARE_LPF, VAR_UINT8  | MASTER_VALUE | MODE_LOOKUP, .config.lookup = { TABLE_GYRO_HARDWARE_LPF }, PG_GYRO_CONFIG, offsetof(gyroConfig_t, gyro_hardware_lpf) },
 

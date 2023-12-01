@@ -57,6 +57,7 @@
 
 #include "pg/pg.h"
 #include "pg/pg_ids.h"
+#include "pg/pats.h"
 
 #include "rx/crsf.h"
 #include "rx/crsf_protocol.h"
@@ -338,10 +339,9 @@ void crsfFrameAttitude(sbuf_t *dst)
 // fill dst buffer with crsf-pats telemetry frame
 void crsfFramePATS(sbuf_t *dst)
 {
-    #define BF_SETTINGS 3
     sbufWriteU8(dst, CRSF_FRAME_PATS_PAYLOAD_SIZE + CRSF_FRAME_LENGTH_TYPE_CRC);
     sbufWriteU8(dst, CRSF_FRAMETYPE_PATS);
-    sbufWriteU16BigEndian(dst, FC_VERSION_PATCH_LEVEL | FC_VERSION_MINOR << 5 | FC_VERSION_MAJOR << 10 | BF_SETTINGS << 13);
+    sbufWriteU16BigEndian(dst, FC_VERSION_PATCH_LEVEL | FC_VERSION_MINOR << 5 | FC_VERSION_MAJOR << 10 | patsConfig()->configVersion << 13);
     sbufWriteU32BigEndian(dst, *(uint32_t *)pilotConfig()->craftName);
     sbufWriteU8(dst, getArmingDisableFlags());
 }
@@ -657,11 +657,14 @@ static void processCrsf(void)
         crsfFinalize(dst);
     }
 
+#ifdef TELEM_FLIGHT_MODE
     if (currentSchedule & BIT(CRSF_FRAME_FLIGHT_MODE_INDEX)) {
         crsfInitializeFrame(dst);
         crsfFrameFlightMode(dst);
         crsfFinalize(dst);
     }
+#endif
+
 #ifdef USE_GPS
     if (currentSchedule & BIT(CRSF_FRAME_GPS_INDEX)) {
         crsfInitializeFrame(dst);
@@ -710,9 +713,13 @@ void initCrsfTelemetry(void)
         || (isAmperageConfigured() && telemetryIsSensorEnabled(SENSOR_CURRENT | SENSOR_FUEL))) {
         crsfSchedule[index++] = BIT(CRSF_FRAME_BATTERY_SENSOR_INDEX);
     }
+
+#ifdef TELEM_FLIGHT_MODE
     if (telemetryIsSensorEnabled(SENSOR_MODE)) {
         crsfSchedule[index++] = BIT(CRSF_FRAME_FLIGHT_MODE_INDEX);
     }
+#endif
+
 #ifdef USE_GPS
     if (featureIsEnabled(FEATURE_GPS)
        && telemetryIsSensorEnabled(SENSOR_ALTITUDE | SENSOR_LAT_LONG | SENSOR_GROUND_SPEED | SENSOR_HEADING)) {
