@@ -595,9 +595,9 @@ typedef enum {
     CRSF_FRAME_FLIGHT_MODE_INDEX,
     CRSF_FRAME_GPS_INDEX,
     CRSF_FRAME_HEARTBEAT_INDEX,
-    CRSF_SCHEDULE_COUNT_MAX
 } crsfFrameTypeIndex_e;
 
+#define CRSF_SCHEDULE_COUNT_MAX 256
 static uint8_t crsfScheduleCount;
 static uint8_t crsfSchedule[CRSF_SCHEDULE_COUNT_MAX];
 
@@ -709,9 +709,15 @@ void initCrsfTelemetry(void)
         crsfSchedule[index++] = BIT(CRSF_FRAME_ATTITUDE_INDEX);
     }
     crsfSchedule[index++] = BIT(CRSF_FRAME_PATS_INDEX);
+    if (sensors(SENSOR_ACC) && telemetryIsSensorEnabled(SENSOR_PITCH | SENSOR_ROLL | SENSOR_HEADING)) {
+        crsfSchedule[index++] = BIT(CRSF_FRAME_ATTITUDE_INDEX);
+    }
     if ((isBatteryVoltageConfigured() && telemetryIsSensorEnabled(SENSOR_VOLTAGE))
         || (isAmperageConfigured() && telemetryIsSensorEnabled(SENSOR_CURRENT | SENSOR_FUEL))) {
         crsfSchedule[index++] = BIT(CRSF_FRAME_BATTERY_SENSOR_INDEX);
+    }
+    if (sensors(SENSOR_ACC) && telemetryIsSensorEnabled(SENSOR_PITCH | SENSOR_ROLL | SENSOR_HEADING)) {
+        crsfSchedule[index++] = BIT(CRSF_FRAME_ATTITUDE_INDEX);
     }
 
 #ifdef TELEM_FLIGHT_MODE
