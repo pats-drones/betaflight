@@ -526,7 +526,7 @@ binary:
 	$(V0) $(MAKE) -j $(TARGET_BIN)
 
 hex:
-	$(V0) $(MAKE) -j $(TARGET_HEX)
+	$(V0) $(MAKE) -j $(TARGET_HEX) $(TARGET_BIN)
 
 TARGETS_REVISION = $(addsuffix _rev,$(VALID_TARGETS))
 ## <TARGET>_rev    : build target and add revision to filename
