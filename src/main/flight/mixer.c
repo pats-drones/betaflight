@@ -387,18 +387,14 @@ static void applyMixToMotors(float motorMix[MAX_SUPPORTED_MOTORS], motorMixer_t 
     static unsigned long over_voltage_flip_trigger = 0;
     if (millis() > 10000 && !over_voltage_flip_trigger && getBatteryAverageCellVoltage() > 440 && !usbVcpIsConnected()) {
         over_voltage_flip_trigger = millis();
-        dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
-        dshotCommandWrite(3, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_REVERSED, DSHOT_CMD_TYPE_INLINE);
     }
-    if (over_voltage_flip_trigger && millis() - over_voltage_flip_trigger < 700) {
+    if (over_voltage_flip_trigger && millis() - over_voltage_flip_trigger < 10000) {
             const int flip_throttle = 900;
             motor[0] = flip_throttle;
             motor[2] = flip_throttle;
             motor[1] = flip_throttle;
             motor[3] = flip_throttle;
     } else if (over_voltage_flip_trigger) {
-            dshotCommandWrite(2, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
-            dshotCommandWrite(3, getMotorCount(), DSHOT_CMD_SPIN_DIRECTION_NORMAL, DSHOT_CMD_TYPE_INLINE);
             mixerResetDisarmedMotors();
             if (millis() - over_voltage_flip_trigger > 60000 && getBatteryAverageCellVoltage() > 440 && !usbVcpIsConnected())
                 over_voltage_flip_trigger = 0; // retry to flip again...
