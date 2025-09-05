@@ -32,6 +32,7 @@
 #include "pg/rx.h"
 
 #include "drivers/time.h"
+#include "drivers/system.h"
 
 #include "config/config.h"
 #include "fc/core.h"
@@ -59,6 +60,11 @@
  */
 
 static failsafeState_t failsafeState;
+
+#define RX_LOSS_REBOOT_TIMEOUT_MS 300000 // 5 min timeout before the drone attempts to reset itself if there's no communicating with the TX module
+#define RX_LOSS_REBOOT_ARM_DELAY_MS 300000 // 5 min timeout after a drone reboot before it starts checking if the RX_Loss took to long 
+
+static uint32_t rxLossTimer = 0;
 
 PG_REGISTER_WITH_RESET_TEMPLATE(failsafeConfig_t, failsafeConfig, PG_FAILSAFE_CONFIG, 2);
 
@@ -225,6 +231,26 @@ uint32_t failsafeFailurePeriodMs(void)
 FAST_CODE_NOINLINE void failsafeUpdateState(void)
 // triggered directly, and ONLY, by the scheduler, at 10ms = PERIOD_RXDATA_FAILURE - intervals
 {
+    static uint32_t bootTimeMs = 0;
+    if (bootTimeMs == 0) {
+        bootTimeMs = millis(); // store boot time once
+    }
+
+    if ((millis() - bootTimeMs) < RX_LOSS_REBOOT_ARM_DELAY_MS) {
+        rxLossTimer = 0;
+        return; // skip reboot logic during first 5 minutes
+    }
+
+    if (!rxIsReceivingSignal()) {
+        if (rxLossTimer == 0) {
+            rxLossTimer = millis();
+        } else if ((millis() - rxLossTimer) > RX_LOSS_REBOOT_TIMEOUT_MS) {
+            systemReset(); // force reboot
+        }
+    } else {
+        rxLossTimer = 0;
+    }
+
     if (!failsafeIsMonitoring()) {
         return;
     }
