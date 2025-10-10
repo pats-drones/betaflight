@@ -62,9 +62,8 @@
 static failsafeState_t failsafeState;
 
 #define RX_LOSS_REBOOT_TIMEOUT_MS 300000 // 5 min timeout before the drone attempts to reset itself if there's no communicating with the TX module
-#define RX_LOSS_REBOOT_ARM_DELAY_MS 300000 // 5 min timeout after a drone reboot before it starts checking if the RX_Loss took to long 
-// Hard cap on runtime: reboot after 3 minutes from power-on
-#define MAX_RUNTIME_REBOOT_TIMEOUT_MS 900000
+#define RX_LOSS_REBOOT_ARM_DELAY_MS 30000 // 30s timeout after a drone reboot before it starts checking if the RX_Loss took to long 
+
 
 static uint32_t rxLossTimer = 0;
 
@@ -236,11 +235,6 @@ FAST_CODE_NOINLINE void failsafeUpdateState(void)
     static uint32_t bootTimeMs = 0;
     if (bootTimeMs == 0) {
         bootTimeMs = millis(); // store boot time once
-    }
-
-    // Unconditional reboot after configured uptime (3 minutes)
-    if ((millis() - bootTimeMs) > MAX_RUNTIME_REBOOT_TIMEOUT_MS) {
-        systemReset();
     }
 
     if ((millis() - bootTimeMs) < RX_LOSS_REBOOT_ARM_DELAY_MS) {
