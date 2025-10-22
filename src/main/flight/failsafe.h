@@ -40,6 +40,7 @@ typedef struct failsafeConfig_s {
     uint8_t failsafe_procedure;             // selected full failsafe procedure is 0: auto-landing, 1: Drop it
     uint16_t failsafe_recovery_delay;       // Time (in 0.1sec) of valid rx data (min 200ms PERIOD_RXDATA_RECOVERY) to allow recovering from failsafe procedure
     uint8_t failsafe_stick_threshold;       // Stick deflection percentage to exit GPS Rescue procedure
+    uint16_t pats_rcloss_reboot_delay;         // Time (in 0.1sec) that RX must be lost before rebooting (0 = disabled)
 } failsafeConfig_t;
 
 PG_DECLARE(failsafeConfig_t, failsafeConfig);
@@ -91,6 +92,8 @@ typedef struct failsafeState_s {
     failsafePhase_e phase;
     failsafeRxLinkState_e rxLinkState;
     bool boxFailsafeSwitchWasOn;
+    uint32_t rebootDeadline;                // absolute time when RX loss reboot should trigger
+    bool rebootPending;                     // reboot should be triggered once safe conditions met
 } failsafeState_t;
 
 void failsafeInit(void);

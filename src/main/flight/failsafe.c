@@ -32,6 +32,7 @@
 #include "pg/rx.h"
 
 #include "drivers/time.h"
+#include "drivers/system.h"
 
 #include "config/config.h"
 #include "fc/core.h"
@@ -70,7 +71,8 @@ PG_RESET_TEMPLATE(failsafeConfig_t, failsafeConfig,
     .failsafe_switch_mode = FAILSAFE_SWITCH_MODE_STAGE1, // default failsafe switch action is identical to rc link loss
     .failsafe_procedure = FAILSAFE_PROCEDURE_DROP_IT,    // default full failsafe procedure is 0: auto-landing
     .failsafe_recovery_delay = 10,                       // 1 sec of valid rx data needed to allow recovering from failsafe procedure
-    .failsafe_stick_threshold = 30                       // 30 percent of stick deflection to exit GPS Rescue procedure
+    .failsafe_stick_threshold = 30,                      // 30 percent of stick deflection to exit GPS Rescue procedure
+    .pats_rcloss_reboot_delay = 0                        // disabled by default
 );
 
 const char * const failsafeProcedureNames[FAILSAFE_PROCEDURE_COUNT] = {
@@ -105,6 +107,8 @@ void failsafeReset(void)
     failsafeState.phase = FAILSAFE_IDLE;
     failsafeState.rxLinkState = FAILSAFE_RXLINK_DOWN;
     failsafeState.boxFailsafeSwitchWasOn = false;
+    failsafeState.rebootDeadline = 0;
+    failsafeState.rebootPending = false;
 }
 
 void failsafeInit(void)
@@ -188,6 +192,8 @@ void failsafeOnValidDataReceived(void)
         failsafeState.rxLinkState = FAILSAFE_RXLINK_UP;
         unsetArmingDisabled(ARMING_DISABLED_BST);
     }
+
+    failsafeState.rebootPending = false;
 }
 
 void failsafeOnValidDataFailed(void)
@@ -203,6 +209,11 @@ void failsafeOnValidDataFailed(void)
         // sets rxLinkState = DOWN to initiate stage 2 failsafe
         failsafeState.rxLinkState = FAILSAFE_RXLINK_DOWN;
         // show RXLOSS and block arming
+    }
+
+    if ((failsafeConfig()->pats_rcloss_reboot_delay > 0) && !failsafeState.rebootPending) {
+        failsafeState.rebootPending = true;
+        failsafeState.rebootDeadline = failsafeState.validRxDataFailedAt + failsafeConfig()->pats_rcloss_reboot_delay * MILLIS_PER_TENTH_SECOND;
     }
 }
 
@@ -243,6 +254,18 @@ FAST_CODE_NOINLINE void failsafeUpdateState(void)
     if (IS_RC_MODE_ACTIVE(BOXFAILSAFE) && (failsafeConfig()->failsafe_switch_mode == FAILSAFE_SWITCH_MODE_STAGE2)) {
         // Force immediate stage 2 responses if mode is failsafe stage2 to emulate immediate loss of signal without waiting
         receivingRxData = false;
+    }
+
+    if (failsafeState.rebootPending) {
+        if (receivingRxData) {
+            failsafeState.rebootPending = false;
+        } else if (!armed && ARMING_FLAG(WAS_EVER_ARMED) && (failsafeConfig()->pats_rcloss_reboot_delay > 0)) {
+            if (cmp32(millis(), failsafeState.rebootDeadline) >= 0) {
+                failsafeState.rebootPending = false;
+                systemReset();
+                return;
+            }
+        }
     }
 
     // Beep RX lost only if we are not seeing data and are armed or have been armed earlier
