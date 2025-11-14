@@ -31,6 +31,7 @@
 #include "config/feature.h"
 
 #include "drivers/dshot.h"
+#include "drivers/motor.h"
 
 #include "fc/controlrate_profile.h"
 #include "fc/runtime_config.h"
@@ -43,6 +44,7 @@
 #include "sensors/battery.h"
 
 #include "mixer_init.h"
+#include "pg/motor.h"
 
 PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 0);
 
@@ -406,6 +408,18 @@ static void mixerConfigureOutput(void)
 void mixerInit(mixerMode_e mixerMode)
 {
     currentMixerMode = mixerMode;
+
+    // Force the ESC driver into the desired DShot300 test mode regardless of stored configuration
+#ifdef USE_MOTOR
+    motorDevConfig_t *motorDevConfig = &motorConfigMutable()->dev;
+    motorDevConfig->motorPwmProtocol = PWM_TYPE_DSHOT300;
+    motorDevConfig->useUnsyncedPwm = false;
+#ifdef USE_DSHOT
+    motorDevConfig->useDshotTelemetry = 0;
+    motorDevConfig->useBurstDshot = DSHOT_DMAR_OFF;
+    motorDevConfig->useDshotBitbang = DSHOT_BITBANG_OFF;
+#endif
+#endif
 
     mixerRuntime.feature3dEnabled = featureIsEnabled(FEATURE_3D);
 
