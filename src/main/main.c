@@ -23,27 +23,50 @@
 
 #include "platform.h"
 
+#include "drivers/time.h"
+#include "drivers/motor.h"
+
 #include "fc/init.h"
 
-#include "scheduler/scheduler.h"
+#include "flight/mixer.h"
 
-void run(void);
+#include "pg/motor.h"
 
 int main(void)
 {
     init();
 
-    run();
+#ifdef USE_MOTOR
+    motorShutdown();
+
+    motorConfigMutable()->dev.motorPwmProtocol = PWM_TYPE_DSHOT300;
+    motorConfigMutable()->dev.useDshotTelemetry = 0;
+    motorConfigMutable()->dev.useDshotEdt = 0;
+#ifdef USE_DSHOT_BITBANG
+    motorConfigMutable()->dev.useDshotBitbang = 0;
+    motorConfigMutable()->dev.useDshotBitbangedTimer = 0;
+#endif
+
+    motorDevInit(&motorConfig()->dev, motorConfig()->mincommand, getMotorCount());
+    motorEnable();
+
+    const uint16_t dshotCommandValue = 1000;
+    const uint8_t motorCount = motorDeviceCount();
+    float motorOutputs[MAX_SUPPORTED_MOTORS];
+
+    for (uint8_t i = 0; i < motorCount && i < MAX_SUPPORTED_MOTORS; i++) {
+        motorOutputs[i] = (float)dshotCommandValue;
+    }
+
+    while (true) {
+        motorWriteAll(motorOutputs);
+        delay(1);
+    }
+#else
+    while (true) {
+        // Nothing to do if motors are not supported on this build.
+    }
+#endif
 
     return 0;
-}
-
-void FAST_CODE run(void)
-{
-    while (true) {
-        scheduler();
-#ifdef SIMULATOR_BUILD
-        delayMicroseconds_real(50); // max rate 20kHz
-#endif
-    }
 }
