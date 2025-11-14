@@ -18,7 +18,9 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-extern "C" {
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "platform.h"
 
 #include "config/feature.h"
@@ -37,7 +39,6 @@ extern "C" {
 #include "flight/mixer.h"
 
 #include "pg/motor.h"
-}
 
 static void configureDshot300(void)
 {
