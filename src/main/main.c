@@ -68,7 +68,7 @@ static void initPb6Gpio(void)
     GPIOB->OSPEEDR |= (3U << (6U * 2U));
     GPIOB->PUPDR &= ~(3U << (6U * 2U));
 
-    GPIOB->BSRR = (uint32_t)(1U << (6U + 16U));
+    GPIOB->BSRRH = (uint16_t)(1U << 6U);
 }
 
 static void sendDshotFrame(uint16_t packet, uint32_t bitTicks, uint32_t oneHighTicks, uint32_t zeroHighTicks)
@@ -77,12 +77,12 @@ static void sendDshotFrame(uint16_t packet, uint32_t bitTicks, uint32_t oneHighT
         const uint32_t start = DWT->CYCCNT;
         const uint32_t highTicks = (packet & 0x8000U) ? oneHighTicks : zeroHighTicks;
 
-        GPIOB->BSRR = (1U << 6U);
+        GPIOB->BSRRL = (uint16_t)(1U << 6U);
         while ((DWT->CYCCNT - start) < highTicks) {
             __NOP();
         }
 
-        GPIOB->BSRR = (1U << (6U + 16U));
+        GPIOB->BSRRH = (uint16_t)(1U << 6U);
         while ((DWT->CYCCNT - start) < bitTicks) {
             __NOP();
         }
