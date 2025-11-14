@@ -248,6 +248,14 @@ CFLAGS     += $(ARCH_FLAGS) \
               -MMD -MP \
               $(EXTRA_FLAGS)
 
+CXXFLAGS   := $(filter-out -std=gnu17,$(CFLAGS)) \
+              -std=gnu++17 \
+              -fno-exceptions \
+              -fno-unwind-tables \
+              -fno-asynchronous-unwind-tables \
+              -fno-rtti \
+              -fno-threadsafe-statics
+
 ASFLAGS     = $(ARCH_FLAGS) \
               $(DEBUG_FLAGS) \
               -x assembler-with-cpp \
@@ -395,34 +403,58 @@ $(TARGET_ELF): $(TARGET_OBJS) $(LD_SCRIPT) $(LD_SCRIPTS)
 
 ## compile_file takes two arguments: (1) optimisation description string and (2) optimisation compiler flag
 define compile_file
-	echo "%% ($(1)) $<" "$(STDOUT)" && \
-	$(CROSS_CC) -c -o $@ $(CFLAGS) $(2) $<
+        echo "%% ($(1)) $<" "$(STDOUT)" && \
+        $(if $(filter %.cpp,$<), \
+            $(CROSS_CXX) -c -o $@ $(CXXFLAGS) $(2) $<, \
+            $(CROSS_CC) -c -o $@ $(CFLAGS) $(2) $<)
 endef
 
 ifeq ($(DEBUG),GDB)
 $(TARGET_OBJ_DIR)/%.o: %.c
-	$(V1) mkdir -p $(dir $@)
-	$(V1) $(if $(findstring $<,$(NOT_OPTIMISED_SRC)), \
-		$(call compile_file,not optimised, $(CC_NO_OPTIMISATION)) \
-	, \
-		$(call compile_file,debug,$(CC_DEBUG_OPTIMISATION)) \
-	)
+        $(V1) mkdir -p $(dir $@)
+        $(V1) $(if $(findstring $<,$(NOT_OPTIMISED_SRC)), \
+                $(call compile_file,not optimised, $(CC_NO_OPTIMISATION)) \
+        , \
+                $(call compile_file,debug,$(CC_DEBUG_OPTIMISATION)) \
+        )
+$(TARGET_OBJ_DIR)/%.o: %.cpp
+        $(V1) mkdir -p $(dir $@)
+        $(V1) $(if $(findstring $<,$(NOT_OPTIMISED_SRC)), \
+                $(call compile_file,not optimised, $(CC_NO_OPTIMISATION)) \
+        , \
+                $(call compile_file,debug,$(CC_DEBUG_OPTIMISATION)) \
+        )
 else
 $(TARGET_OBJ_DIR)/%.o: %.c
-	$(V1) mkdir -p $(dir $@)
-	$(V1) $(if $(findstring $<,$(NOT_OPTIMISED_SRC)), \
-		$(call compile_file,not optimised,$(CC_NO_OPTIMISATION)) \
-	, \
-		$(if $(findstring $(subst ./src/main/,,$<),$(SPEED_OPTIMISED_SRC)), \
-			$(call compile_file,speed optimised,$(CC_SPEED_OPTIMISATION)) \
-		, \
-			$(if $(findstring $(subst ./src/main/,,$<),$(SIZE_OPTIMISED_SRC)), \
-				$(call compile_file,size optimised,$(CC_SIZE_OPTIMISATION)) \
-			, \
-				$(call compile_file,optimised,$(CC_DEFAULT_OPTIMISATION)) \
-			) \
-		) \
-	)
+        $(V1) mkdir -p $(dir $@)
+        $(V1) $(if $(findstring $<,$(NOT_OPTIMISED_SRC)), \
+                $(call compile_file,not optimised,$(CC_NO_OPTIMISATION)) \
+        , \
+                $(if $(findstring $(subst ./src/main/,,$<),$(SPEED_OPTIMISED_SRC)), \
+                        $(call compile_file,speed optimised,$(CC_SPEED_OPTIMISATION)) \
+                , \
+                        $(if $(findstring $(subst ./src/main/,,$<),$(SIZE_OPTIMISED_SRC)), \
+                                $(call compile_file,size optimised,$(CC_SIZE_OPTIMISATION)) \
+                        , \
+                                $(call compile_file,optimised,$(CC_DEFAULT_OPTIMISATION)) \
+                        ) \
+                ) \
+        )
+$(TARGET_OBJ_DIR)/%.o: %.cpp
+        $(V1) mkdir -p $(dir $@)
+        $(V1) $(if $(findstring $<,$(NOT_OPTIMISED_SRC)), \
+                $(call compile_file,not optimised,$(CC_NO_OPTIMISATION)) \
+        , \
+                $(if $(findstring $(subst ./src/main/,,$<),$(SPEED_OPTIMISED_SRC)), \
+                        $(call compile_file,speed optimised,$(CC_SPEED_OPTIMISATION)) \
+                , \
+                        $(if $(findstring $(subst ./src/main/,,$<),$(SIZE_OPTIMISED_SRC)), \
+                                $(call compile_file,size optimised,$(CC_SIZE_OPTIMISATION)) \
+                        , \
+                                $(call compile_file,optimised,$(CC_DEFAULT_OPTIMISATION)) \
+                        ) \
+                ) \
+        )
 endif
 
 # Assemble
