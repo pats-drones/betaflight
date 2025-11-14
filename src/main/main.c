@@ -25,6 +25,7 @@
 
 #include "drivers/time.h"
 #include "drivers/motor.h"
+#include "drivers/io.h"
 
 #include "fc/init.h"
 
@@ -47,7 +48,15 @@ int main(void)
     motorConfigMutable()->dev.useDshotBitbangedTimer = 0;
 #endif
 
-    motorDevInit(&motorConfig()->dev, motorConfig()->mincommand, getMotorCount());
+    motorConfigMutable()->dev.ioTags[0] = IO_TAG(PB6);
+    for (uint8_t i = 1; i < MAX_SUPPORTED_MOTORS; i++) {
+        motorConfigMutable()->dev.ioTags[i] = IO_TAG_NONE;
+    }
+    for (uint8_t i = 0; i < MAX_SUPPORTED_MOTORS; i++) {
+        motorConfigMutable()->dev.motorOutputReordering[i] = i;
+    }
+
+    motorDevInit(&motorConfig()->dev, motorConfig()->mincommand, 1);
     motorEnable();
 
     const uint16_t dshotCommandValue = 1000;
