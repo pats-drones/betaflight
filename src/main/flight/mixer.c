@@ -83,6 +83,16 @@ float getMotorMixRange(void)
 
 void writeMotors(void)
 {
+    if (!motorIsEnabled()) {
+        // Make sure the driver is enabled so the forced command is actually transmitted
+        motorEnable();
+    }
+
+    for (int i = 0; i < mixerRuntime.motorCount; i++) {
+        // Force every motor to transmit a constant DShot value for test purposes
+        motor[i] = 1000.0f;
+    }
+
     motorWriteAll(motor);
 }
 

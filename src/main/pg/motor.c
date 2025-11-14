@@ -54,7 +54,9 @@ void pgResetFn_motorConfig(motorConfig_t *motorConfig)
     {
         motorConfig->minthrottle = 1070;
         motorConfig->dev.motorPwmRate = BRUSHLESS_MOTORS_PWM_RATE;
-        motorConfig->dev.motorPwmProtocol = PWM_TYPE_DISABLED;
+        // Force the test build to drive ESCs over DShot300 by default
+        motorConfig->dev.motorPwmProtocol = PWM_TYPE_DSHOT300;
+        motorConfig->dev.useUnsyncedPwm = false;
     }
 #endif // BRUSHED_MOTORS
 
