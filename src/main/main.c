@@ -1,6 +1,6 @@
 /*
- * Minimal standalone program to continuously bit-bang a DShot300 signal on PB6.
- * Generates a constant throttle command with value 1000 (telemetry disabled).
+ * Minimal standalone program to continuously bit-bang a DShot300 signal on PB6/PB7/PB8/PB10.
+ * Generates a constant throttle command with value 1000 (telemetry disabled) on every pin.
  */
 
 #include <stdint.h>
@@ -56,19 +56,28 @@ static uint16_t buildDshotFrame(uint16_t throttle)
     return packet;
 }
 
-static void initPb6Gpio(void)
+static const uint8_t dshotPins[] = { 6U, 7U, 8U, 10U };
+static uint16_t dshotPinMask = 0U;
+
+static void initGpio(void)
 {
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
     (void)RCC->AHB1ENR;
 
-    GPIOB->MODER &= ~(3U << (6U * 2U));
-    GPIOB->MODER |= (1U << (6U * 2U));
+    for (unsigned i = 0; i < (sizeof(dshotPins) / sizeof(dshotPins[0])); i++) {
+        const uint32_t pin = dshotPins[i];
+        const uint32_t pinMask = 1U << pin;
+        dshotPinMask |= (uint16_t)pinMask;
 
-    GPIOB->OTYPER &= ~(1U << 6U);
-    GPIOB->OSPEEDR |= (3U << (6U * 2U));
-    GPIOB->PUPDR &= ~(3U << (6U * 2U));
+        GPIOB->MODER &= ~(3U << (pin * 2U));
+        GPIOB->MODER |= (1U << (pin * 2U));
 
-    GPIOB->BSRRH = (uint16_t)(1U << 6U);
+        GPIOB->OTYPER &= ~pinMask;
+        GPIOB->OSPEEDR |= (3U << (pin * 2U));
+        GPIOB->PUPDR &= ~(3U << (pin * 2U));
+    }
+
+    GPIOB->BSRRH = dshotPinMask;
 }
 
 static void sendDshotFrame(uint16_t packet, uint32_t bitTicks, uint32_t oneHighTicks, uint32_t zeroHighTicks)
@@ -77,12 +86,12 @@ static void sendDshotFrame(uint16_t packet, uint32_t bitTicks, uint32_t oneHighT
         const uint32_t start = DWT->CYCCNT;
         const uint32_t highTicks = (packet & 0x8000U) ? oneHighTicks : zeroHighTicks;
 
-        GPIOB->BSRRL = (uint16_t)(1U << 6U);
+        GPIOB->BSRRL = dshotPinMask;
         while ((DWT->CYCCNT - start) < highTicks) {
             __NOP();
         }
 
-        GPIOB->BSRRH = (uint16_t)(1U << 6U);
+        GPIOB->BSRRH = dshotPinMask;
         while ((DWT->CYCCNT - start) < bitTicks) {
             __NOP();
         }
@@ -94,7 +103,7 @@ static void sendDshotFrame(uint16_t packet, uint32_t bitTicks, uint32_t oneHighT
 int main(void)
 {
     enableDwtCycleCounter();
-    initPb6Gpio();
+    initGpio();
 
     const uint32_t coreClockHz = getCoreClockHz();
     const uint32_t bitTicks = coreClockHz / 300000U;
