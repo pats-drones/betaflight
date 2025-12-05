@@ -61,6 +61,9 @@
 
 static failsafeState_t failsafeState;
 
+#define MAX_RUNTIME_WITHOUT_RXDATA_MS 1800000 // 30 minutes
+bool hasHadRX = false;
+
 PG_REGISTER_WITH_RESET_TEMPLATE(failsafeConfig_t, failsafeConfig, PG_FAILSAFE_CONFIG, 2);
 
 PG_RESET_TEMPLATE(failsafeConfig_t, failsafeConfig,
@@ -236,6 +239,11 @@ uint32_t failsafeFailurePeriodMs(void)
 FAST_CODE_NOINLINE void failsafeUpdateState(void)
 // triggered directly, and ONLY, by the scheduler, at 10ms = PERIOD_RXDATA_FAILURE - intervals
 {
+    static uint32_t bootTimeMs = 0;
+    if (bootTimeMs == 0) {
+        bootTimeMs = millis();
+    }
+
     if (!failsafeIsMonitoring()) {
         return;
     }
@@ -245,6 +253,18 @@ FAST_CODE_NOINLINE void failsafeUpdateState(void)
     // goes false after the stage 1 delay, whether from signal loss or BOXFAILSAFE switch activation
     // goes true immediately BOXFAILSAFE switch is reverted, or after recovery delay once signal recovers
     // essentially means 'should be in failsafe stage 2'
+
+    if (receivingRxData) {
+        hasHadRX = true;
+    } 
+
+    if (!hasHadRX) && ((millis() - bootTimeMs) > MAX_RUNTIME_WITHOUT_RXDATA_MS)) {
+        // no valid RX data for 30 seconds after having had valid data earlier
+        // initiate a system reboot to attempt recovery from possible RX issues
+        systemReset();
+        return;
+    }
+    
 
     DEBUG_SET(DEBUG_FAILSAFE, 2, receivingRxData); // from Rx alone, not considering switch
 
