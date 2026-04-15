@@ -258,9 +258,8 @@ FAST_CODE_NOINLINE void failsafeUpdateState(void)
         hasHadRX = true;
     } 
 
-    if (!hasHadRX) && ((millis() - bootTimeMs) > MAX_RUNTIME_WITHOUT_RXDATA_MS)) {
-        // no valid RX data for 30 seconds after having had valid data earlier
-        // initiate a system reboot to attempt recovery from possible RX issues
+    if ((!hasHadRX) && ((millis() - bootTimeMs) > MAX_RUNTIME_WITHOUT_RXDATA_MS)) {
+        // If never having had RX after booting, reboot after 30min to try to recover
         systemReset();
         return;
     }
