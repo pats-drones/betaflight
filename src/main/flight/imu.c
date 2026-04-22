@@ -366,7 +366,11 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
         float refQuaternionX = + rollDeflection*cos_approx((heading_error)*(M_PIf / 1800.0f)) + pitchDeflection*sin_approx((heading_error)*(M_PIf / 1800.0f));
         float refQuaternionY = - rollDeflection*sin_approx((heading_error)*(M_PIf / 1800.0f)) + pitchDeflection*cos_approx((heading_error)*(M_PIf / 1800.0f));
 
-
+        if ( (sq(refQuaternionX)+sq(refQuaternionY)) > 1 ) {
+            float factor = 1 / sqrt(sq(refQuaternionX) + sq(refQuaternionY));
+            refQuaternionX *= factor;
+            refQuaternionY *= factor;
+        }
         quaternion qr; // reference
         qr.x = refQuaternionX;
         qr.y = refQuaternionY;
