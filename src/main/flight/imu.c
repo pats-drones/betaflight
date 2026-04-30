@@ -335,88 +335,40 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
        attitude.values.pitch = lrintf(((0.5f * M_PIf) - acos_approx(+2.0f * (buffer.wy - buffer.xz))) * (1800.0f / M_PIf));
        attitude.values.yaw = lrintf((-atan2_approx((+2.0f * (buffer.wz + buffer.xy)), (+1.0f - 2.0f * (buffer.yy + buffer.zz))) * (1800.0f / M_PIf)));
     } else {
-        float norm_q1_WZ = invSqrt(sq(q.w)+sq(q.z));
-
-        quaternion q2; // extract heading from q1
-        q2.w = q.w*norm_q1_WZ;
-        q2.x = 0.0f;
-        q2.y = 0.0f;
-        q2.z = q.z*norm_q1_WZ;
-
-        float heading_angle = 2.0f*acos_approx(q2.w)*(1800.0f / M_PIf);
-        if (q2.z<0.0f)
-            heading_angle = -heading_angle;
-
-        float heading_error = heading_angle - (getYawAngle()*10.0f);
-        if (heading_error < -1800.0f)
-            heading_error += 3600.0f;
-        else if (heading_error > 1800.0f)
-            heading_error -= 3600.0f;
-
-        quaternion qd; // de-rotated - quat with only roll and pitch, t.o.v. hover
-        qd.w = + q.w*q2.w + q.z*q2.z;
-        qd.x = - q.x*q2.w - q.y*q2.z;
-        qd.y = - q.y*q2.w + q.x*q2.z;
-        qd.z = + q.w*q2.z - q.z*q2.w;
-
         float rollDeflection = -getRcDeflection(FD_ROLL);
         float pitchDeflection = -getRcDeflection(FD_PITCH);
-
-        // rotate desired deflections to compensate for the current heading error of the drone
-        float refQuaternionX = + rollDeflection*cos_approx((heading_error)*(M_PIf / 1800.0f)) + pitchDeflection*sin_approx((heading_error)*(M_PIf / 1800.0f));
-        float refQuaternionY = - rollDeflection*sin_approx((heading_error)*(M_PIf / 1800.0f)) + pitchDeflection*cos_approx((heading_error)*(M_PIf / 1800.0f));
-
-        if ( (sq(refQuaternionX)+sq(refQuaternionY)) > 1 ) {
-            float factor = 1 / sqrt(sq(refQuaternionX) + sq(refQuaternionY));
-            refQuaternionX *= factor;
-            refQuaternionY *= factor;
-        }
-        quaternion qr; // reference
-        qr.x = refQuaternionX;
-        qr.y = refQuaternionY;
-        qr.z = 0;
-        qr.w = sqrt(1-sq(qr.x)-sq(qr.y));
-
-        quaternion qe; // error
-        qe.w = qr.w*qd.w + qr.x*qd.x + qr.y*qd.y;
-        qe.x = -qr.w*qd.x + qr.x*qd.w;
-        qe.y = -qr.w*qd.y + qr.y*qd.w;
-        qe.z = -qr.x*qd.y + qr.y*qd.x;
-
-        if (qe.w < 0) {
-            qe.w = -qe.w;
-            qe.x = -qe.x;
-            qe.y = -qe.y;
-            qe.z = -qe.z;
+        const float commandedTiltNormSq = sq(rollDeflection) + sq(pitchDeflection);
+        if (commandedTiltNormSq > 1.0f) {
+            const float factor = invSqrt(commandedTiltNormSq);
+            rollDeflection *= factor;
+            pitchDeflection *= factor;
         }
 
-        float norm_qe_WZ = invSqrt(sq(qe.w)+sq(qe.z));
+        const float refQuaternionW = sqrtf(MAX(0.0f, 1.0f - sq(rollDeflection) - sq(pitchDeflection)));
+        const float commandedYaw = DEGREES_TO_RADIANS(getYawAngle());
+        const float cosCommandedYaw = cos_approx(commandedYaw);
+        const float sinCommandedYaw = sin_approx(commandedYaw);
 
-        // extract heading from qe
-        q2.w = qe.w*norm_qe_WZ;
-        q2.x = 0.0f;
-        q2.y = 0.0f;
-        q2.z = qe.z*norm_qe_WZ;
+        // Yaw spins around the thrust axis, so only compare the commanded body-Z axis against the current one.
+        const float commandedBodyZEarthX = cosCommandedYaw * (-2.0f * refQuaternionW * pitchDeflection) - sinCommandedYaw * (2.0f * refQuaternionW * rollDeflection);
+        const float commandedBodyZEarthY = sinCommandedYaw * (-2.0f * refQuaternionW * pitchDeflection) + cosCommandedYaw * (2.0f * refQuaternionW * rollDeflection);
+        const float commandedBodyZEarthZ = 1.0f - 2.0f * (sq(rollDeflection) + sq(pitchDeflection));
 
-        // de-rotated - quat with only roll and pitch, t.o.v. hover
-        qd.w = + qe.w*q2.w + qe.z*q2.z;
-        qd.x = - qe.x*q2.w - qe.y*q2.z;
-        qd.y = - qe.y*q2.w + qe.x*q2.z;
-        qd.z = + qe.w*q2.z - qe.z*q2.w;
+        const float commandedBodyZBodyX = rMat[0][0] * commandedBodyZEarthX + rMat[1][0] * commandedBodyZEarthY + rMat[2][0] * commandedBodyZEarthZ;
+        const float commandedBodyZBodyY = rMat[0][1] * commandedBodyZEarthX + rMat[1][1] * commandedBodyZEarthY + rMat[2][1] * commandedBodyZEarthZ;
+        const float commandedBodyZBodyZ = rMat[0][2] * commandedBodyZEarthX + rMat[1][2] * commandedBodyZEarthY + rMat[2][2] * commandedBodyZEarthZ;
 
-        // quaternion rotation angle
-        rotationAngle = 2.0f*acos_approx(qd.w)*(1800.0f / M_PIf);
+        const float axisErrorMagnitude = sqrtf(sq(commandedBodyZBodyX) + sq(commandedBodyZBodyY));
+        rotationAngle = atan2_approx(axisErrorMagnitude, commandedBodyZBodyZ) * (1800.0f / M_PIf);
 
-        // norm of the rotational rates
-        float rate_norm = invSqrt(sq(qd.x)+sq(qd.y)+sq(qd.z));
-        // angle commands
+        float angleScale = 0.0f;
+        if (axisErrorMagnitude > 0.0f) {
+            angleScale = rotationAngle / axisErrorMagnitude;
+        }
 
-        float rollCommand = -qd.x*rate_norm*rotationAngle;
-        float pitchCommand = -qd.y*rate_norm*rotationAngle;
-
-        attitude.values.roll = lrintf(rollCommand);
-        attitude.values.pitch = lrintf(pitchCommand);
-        attitude.values.yaw = lrintf(-heading_angle );
+        attitude.values.roll = lrintf(commandedBodyZBodyY * angleScale);
+        attitude.values.pitch = lrintf(-commandedBodyZBodyX * angleScale);
+        attitude.values.yaw = lrintf((-atan2_approx((+2.0f * (qP.wz + qP.xy)), (+1.0f - 2.0f * (qP.yy + qP.zz))) * (1800.0f / M_PIf)));
     }
 
     if (attitude.values.yaw < 0) {

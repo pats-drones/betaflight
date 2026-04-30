@@ -70,8 +70,11 @@ extern "C" {
         .enabledFeatures = 0
     );
 
-    float getYawAngle() {return 0.f;}
-    float getRcDeflection(int) {return 0.0f;}
+    static float mockYawAngle = 0.0f;
+    static float mockRcDeflection[XYZ_AXIS_COUNT] = {};
+
+    float getYawAngle() {return mockYawAngle;}
+    float getRcDeflection(int axis) {return mockRcDeflection[axis];}
 }
 
 #include "unittest_macros.h"
@@ -202,6 +205,67 @@ TEST(FlightImuTest, TestSmallAngle)
 
     // expect
     EXPECT_FALSE(isUpright());
+}
+
+TEST(FlightImuTest, TestUpdateEulerAnglesAlignsCurrentAndCommandedBodyZAxis)
+{
+    q.w = 1.0f;
+    q.x = 0.0f;
+    q.y = 0.0f;
+    q.z = 0.0f;
+
+    mockYawAngle = 0.0f;
+    mockRcDeflection[FD_ROLL] = -0.5f;
+    mockRcDeflection[FD_PITCH] = 0.0f;
+
+    imuComputeRotationMatrix();
+    imuUpdateEulerAngles();
+
+    EXPECT_EQ(600, attitude.values.roll);
+    EXPECT_EQ(0, attitude.values.pitch);
+    EXPECT_EQ(0, attitude.values.yaw);
+    EXPECT_NEAR(600.0f, rotationAngle, 1e-3f);
+}
+
+TEST(FlightImuTest, TestUpdateEulerAnglesUsesYawReferenceForCommandedBodyZAxis)
+{
+    q.w = 1.0f;
+    q.x = 0.0f;
+    q.y = 0.0f;
+    q.z = 0.0f;
+
+    mockYawAngle = 90.0f;
+    mockRcDeflection[FD_ROLL] = 0.0f;
+    mockRcDeflection[FD_PITCH] = -0.5f;
+
+    imuComputeRotationMatrix();
+    imuUpdateEulerAngles();
+
+    EXPECT_EQ(-600, attitude.values.roll);
+    EXPECT_EQ(0, attitude.values.pitch);
+    EXPECT_EQ(0, attitude.values.yaw);
+    EXPECT_NEAR(600.0f, rotationAngle, 1e-3f);
+}
+
+TEST(FlightImuTest, TestUpdateEulerAnglesRemainsFiniteAtHeadingSingularity)
+{
+    q.w = 0.0f;
+    q.x = 1.0f;
+    q.y = 0.0f;
+    q.z = 0.0f;
+
+    mockYawAngle = 0.0f;
+    mockRcDeflection[FD_ROLL] = 0.0f;
+    mockRcDeflection[FD_PITCH] = 0.0f;
+
+    imuComputeRotationMatrix();
+    imuUpdateEulerAngles();
+
+    EXPECT_EQ(0, attitude.values.roll);
+    EXPECT_EQ(0, attitude.values.pitch);
+    EXPECT_EQ(0, attitude.values.yaw);
+    EXPECT_TRUE(std::isfinite(rotationAngle));
+    EXPECT_NEAR(1800.0f, rotationAngle, 1e-3f);
 }
 
 // STUBS
