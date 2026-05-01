@@ -114,6 +114,7 @@ quaternion offset = QUATERNION_INITIALIZE;
 
 // absolute angle inclination in multiple of 0.1 degree    180 deg = 1800
 attitudeEulerAngles_t attitude = EULER_INITIALIZE;
+attitudeEulerAngles_t actualAttitude = EULER_INITIALIZE; 
 
 PG_REGISTER_WITH_RESET_TEMPLATE(imuConfig_t, imuConfig, PG_IMU_CONFIG, 2);
 
@@ -334,7 +335,15 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
        attitude.values.roll = lrintf(atan2_approx((+2.0f * (buffer.wx + buffer.yz)), (+1.0f - 2.0f * (buffer.xx + buffer.yy))) * (1800.0f / M_PIf));
        attitude.values.pitch = lrintf(((0.5f * M_PIf) - acos_approx(+2.0f * (buffer.wy - buffer.xz))) * (1800.0f / M_PIf));
        attitude.values.yaw = lrintf((-atan2_approx((+2.0f * (buffer.wz + buffer.xy)), (+1.0f - 2.0f * (buffer.yy + buffer.zz))) * (1800.0f / M_PIf)));
+
+       actualAttitude.values.roll = attitude.values.roll;
+       actualAttitude.values.pitch = attitude.values.pitch;
+       actualAttitude.values.yaw = attitude.values.yaw;
     } else {
+        actualAttitude.values.roll = lrintf(atan2_approx(rMat[2][1], rMat[2][2]) * (1800.0f / M_PIf));
+        actualAttitude.values.pitch = lrintf(((0.5f * M_PIf) - acos_approx(-rMat[2][0])) * (1800.0f / M_PIf));
+        actualAttitude.values.yaw = lrintf((-atan2_approx(rMat[1][0], rMat[0][0]) * (1800.0f / M_PIf)));
+
         float rollDeflection = -getRcDeflection(FD_ROLL);
         float pitchDeflection = -getRcDeflection(FD_PITCH);
         const float commandedTiltNormSq = sq(rollDeflection) + sq(pitchDeflection);
@@ -373,6 +382,9 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
 
     if (attitude.values.yaw < 0) {
         attitude.values.yaw += 3600;
+    }
+    if (actualAttitude.values.yaw < 0) {
+        actualAttitude.values.yaw += 3600;
     }
 }
 

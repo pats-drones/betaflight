@@ -502,7 +502,7 @@ static FAST_CODE_NOINLINE void handleCrashRecovery(
             // on roll and pitch axes calculate currentPidSetpoint and errorRate to level the aircraft to recover from crash
             if (sensors(SENSOR_ACC)) {
                 // errorAngle is deviation from horizontal
-                const float errorAngle =  -(attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f;
+                const float errorAngle =  -(actualAttitude.raw[axis] - angleTrim->raw[axis]) / 10.0f;
                 *currentPidSetpoint = errorAngle * pidRuntime.levelGain;
                 *errorRate = *currentPidSetpoint - gyroRate;
             }
@@ -517,8 +517,8 @@ static FAST_CODE_NOINLINE void handleCrashRecovery(
                    && fabsf(gyro.gyroADCf[FD_YAW]) < pidRuntime.crashRecoveryRate)) {
             if (sensors(SENSOR_ACC)) {
                 // check aircraft nearly level
-                if (abs(attitude.raw[FD_ROLL] - angleTrim->raw[FD_ROLL]) < pidRuntime.crashRecoveryAngleDeciDegrees
-                   && abs(attitude.raw[FD_PITCH] - angleTrim->raw[FD_PITCH]) < pidRuntime.crashRecoveryAngleDeciDegrees) {
+                if (abs(actualAttitude.raw[FD_ROLL] - angleTrim->raw[FD_ROLL]) < pidRuntime.crashRecoveryAngleDeciDegrees
+                   && abs(actualAttitude.raw[FD_PITCH] - angleTrim->raw[FD_PITCH]) < pidRuntime.crashRecoveryAngleDeciDegrees) {
                     pidRuntime.inCrashRecoveryMode = false;
                     BEEP_OFF;
                 }
@@ -835,7 +835,7 @@ static FAST_CODE_NOINLINE float applyLaunchControl(int axis, const rollAndPitchT
     // If ACC is enabled and a limit angle is set, then try to limit forward tilt
     // to that angle and slow down the rate as the limit is approached to reduce overshoot
     if ((axis == FD_PITCH) && (pidRuntime.launchControlAngleLimit > 0) && (ret > 0)) {
-        const float currentAngle = (attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f;
+        const float currentAngle = (actualAttitude.raw[axis] - angleTrim->raw[axis]) / 10.0f;
         if (currentAngle >= pidRuntime.launchControlAngleLimit) {
             ret = 0.0f;
         } else {

@@ -51,6 +51,7 @@ typedef union {
 #define EULER_INITIALIZE  { { 0, 0, 0 } }
 
 extern attitudeEulerAngles_t attitude;
+extern attitudeEulerAngles_t actualAttitude; // We overloaded the attitude to be the setpoint error w.r.t. commanded attitude
 extern float rMat[3][3];
 
 typedef struct imuConfig_s {
