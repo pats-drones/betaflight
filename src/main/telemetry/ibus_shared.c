@@ -407,7 +407,7 @@ static void setValue(uint8_t* bufferPtr, uint8_t sensorType, uint8_t length)
         case IBUS_SENSOR_TYPE_ROLL:
         case IBUS_SENSOR_TYPE_PITCH:
         case IBUS_SENSOR_TYPE_YAW:
-            value.int16 = attitude.raw[sensorType - IBUS_SENSOR_TYPE_ROLL] *10;
+            value.int16 = actualAttitude.raw[sensorType - IBUS_SENSOR_TYPE_ROLL] *10;
             break;
         case IBUS_SENSOR_TYPE_ARMED:
             value.uint16 = ARMING_FLAG(ARMED) ? 1 : 0;
