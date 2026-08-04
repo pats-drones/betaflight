@@ -67,6 +67,7 @@
 
 #include "telemetry/telemetry.h"
 #include "telemetry/msp_shared.h"
+#include "telemetry/pats_flight.h"
 
 #include "crsf.h"
 
@@ -344,6 +345,17 @@ void crsfFramePATS(sbuf_t *dst)
     sbufWriteU16BigEndian(dst, FC_VERSION_PATCH_LEVEL | FC_VERSION_MINOR << 5 | FC_VERSION_MAJOR << 10 | patsConfig()->configVersion << 13);
     sbufWriteU32BigEndian(dst, *(uint32_t *)pilotConfig()->craftName);
     sbufWriteU8(dst, getArmingDisableFlags());
+}
+
+void crsfFramePatsFlight(sbuf_t *dst)
+{
+    patsFlightTelemetryState_t state;
+    patsFlightTelemetryStateFromFc(&state);
+    const patsFlightPayload_t payload = encodePatsFlightPayload(&state);
+
+    sbufWriteU8(dst, CRSF_FRAME_PATS_FLIGHT_PAYLOAD_SIZE + CRSF_FRAME_LENGTH_TYPE_CRC);
+    sbufWriteU8(dst, CRSF_FRAMETYPE_PATS_FLIGHT);
+    sbufWriteData(dst, payload.bytes, PATS_FLIGHT_PAYLOAD_SIZE);
 }
 
 /*
@@ -909,6 +921,9 @@ int getCrsfFrame(uint8_t *frame, crsfFrameType_e frameType)
         break;
     case CRSF_FRAMETYPE_PATS:
         crsfFramePATS(sbuf);
+        break;
+    case CRSF_FRAMETYPE_PATS_FLIGHT:
+        crsfFramePatsFlight(sbuf);
         break;
     case CRSF_FRAMETYPE_BATTERY_SENSOR:
         crsfFrameBatterySensor(sbuf);

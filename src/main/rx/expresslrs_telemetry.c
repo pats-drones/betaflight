@@ -363,6 +363,12 @@ bool getNextTelemetryPayload(uint8_t *nextPayloadSize, uint8_t **payloadData)
         return true;
     } else
 #endif
+    if (ARMING_FLAG(ARMED)) {
+        *nextPayloadSize = getCrsfFrame(tlmBuffer, CRSF_FRAMETYPE_PATS_FLIGHT);
+        *payloadData = tlmBuffer;
+        return true;
+    }
+
     if (tlmSensors & BIT(currentPayloadIndex)) {
         *nextPayloadSize = getCrsfFrame(tlmBuffer, payloadTypes[currentPayloadIndex]);
         *payloadData = tlmBuffer;

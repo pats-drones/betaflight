@@ -184,6 +184,7 @@ COMMON_SRC = \
             sensors/rangefinder.c \
             telemetry/telemetry.c \
             telemetry/crsf.c \
+            telemetry/pats_flight.c \
             telemetry/ghst.c \
             telemetry/srxl.c \
             telemetry/frsky_hub.c \

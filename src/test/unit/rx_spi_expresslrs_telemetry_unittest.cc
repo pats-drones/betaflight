@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <limits.h>
 
@@ -42,6 +43,7 @@ extern "C" {
 
     #include "telemetry/telemetry.h"
     #include "telemetry/msp_shared.h"
+    #include "telemetry/pats_flight.h"
     #include "rx/crsf_protocol.h"
     #include "rx/expresslrs_telemetry.h"
     #include "flight/imu.h"
@@ -61,6 +63,7 @@ extern "C" {
 
     extern volatile bool mspReplyPending;
     extern volatile bool deviceInfoReplyPending;
+    extern quaternion testQuaternion;
 
     bool airMode;
 
@@ -217,6 +220,52 @@ TEST(RxSpiExpressLrsTelemetryUnitTest, TestFlightMode)
     EXPECT_EQ(0, payload[8]);
 
     testSetDataToTransmit(payloadSize, payload);
+}
+
+TEST(RxSpiExpressLrsTelemetryUnitTest, TestArmedPatsFlightPriority)
+{
+    initTelemetry();
+    currentPayloadIndex = 0;
+    ENABLE_ARMING_FLAG(ARMED);
+
+    uint8_t *payload = 0;
+    uint8_t payloadSize = 0;
+
+    ASSERT_TRUE(getNextTelemetryPayload(&payloadSize, &payload));
+    EXPECT_EQ(PATS_FLIGHT_CRSF_FRAME_SIZE, payloadSize);
+    EXPECT_EQ(CRSF_FRAMETYPE_PATS_FLIGHT, payload[2]);
+    EXPECT_EQ(0, currentPayloadIndex);
+
+    ASSERT_TRUE(getNextTelemetryPayload(&payloadSize, &payload));
+    EXPECT_EQ(CRSF_FRAMETYPE_PATS_FLIGHT, payload[2]);
+    EXPECT_EQ(0, currentPayloadIndex);
+
+    DISABLE_ARMING_FLAG(ARMED);
+    ASSERT_TRUE(getNextTelemetryPayload(&payloadSize, &payload));
+    EXPECT_EQ(CRSF_FRAMETYPE_GPS, payload[2]);
+    EXPECT_EQ(1, currentPayloadIndex);
+}
+
+TEST(RxSpiExpressLrsTelemetryUnitTest, TestArmedPatsFlightLatestStateWins)
+{
+    initTelemetry();
+    ENABLE_ARMING_FLAG(ARMED);
+
+    uint8_t *payload = 0;
+    uint8_t payloadSize = 0;
+
+    testQuaternion = { 1.0f, 0.0f, 0.0f, 0.0f };
+    ASSERT_TRUE(getNextTelemetryPayload(&payloadSize, &payload));
+    uint8_t first[PATS_FLIGHT_CRSF_FRAME_SIZE];
+    memcpy(first, payload, PATS_FLIGHT_CRSF_FRAME_SIZE);
+
+    testQuaternion = { 0.1f, 0.9f, 0.2f, -0.3f };
+    ASSERT_TRUE(getNextTelemetryPayload(&payloadSize, &payload));
+    EXPECT_EQ(CRSF_FRAMETYPE_PATS_FLIGHT, payload[2]);
+    EXPECT_NE(0, memcmp(first, payload, PATS_FLIGHT_CRSF_FRAME_SIZE));
+
+    DISABLE_ARMING_FLAG(ARMED);
+    testQuaternion = { 1.0f, 0.0f, 0.0f, 0.0f };
 }
 
 TEST(RxSpiExpressLrsTelemetryUnitTest, TestMspVersionRequest)
@@ -391,6 +440,8 @@ TEST(RxSpiExpressLrsTelemetryUnitTest, TestDeviceInfoResp)
 extern "C" {
 
     attitudeEulerAngles_t attitude = { { 0, 0, 0 } };     // absolute angle inclination in multiple of 0.1 degree    180 deg = 1800
+    quaternion testQuaternion = { 1.0f, 0.0f, 0.0f, 0.0f };
+    acc_t acc;
     gpsSolutionData_t gpsSol;
     rssiSource_e rssiSource;
     uint8_t armingFlags;
@@ -418,6 +469,10 @@ extern "C" {
     bool sensors(uint32_t ) { return true; }
 
     bool airmodeIsEnabled(void) {return airMode; }
+
+    void getQuaternion(quaternion *quat) { *quat = testQuaternion; }
+
+    armingDisableFlags_e getArmingDisableFlags(void) { return (armingDisableFlags_e)0; }
 
     bool isBatteryVoltageConfigured(void) { return true; }
     bool isAmperageConfigured(void) { return true; }

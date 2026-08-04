@@ -46,6 +46,9 @@ typedef enum {
     CRSF_FRAMETYPE_ATTITUDE = 0x1E,
     CRSF_FRAMETYPE_PATS = 0x1F,
     CRSF_FRAMETYPE_FLIGHT_MODE = 0x21,
+    // PATS custom normal broadcast frame. 0x22 is intentionally outside the CRSF-WG standard set used here,
+    // outside the extended-header range, and distinct from the deployed 0x1F PATS link/config frame.
+    CRSF_FRAMETYPE_PATS_FLIGHT = 0x22,
     // Extended Header Frames, range: 0x28 to 0x96
     CRSF_FRAMETYPE_DEVICE_PING = 0x28,
     CRSF_FRAMETYPE_DEVICE_INFO = 0x29,
@@ -91,6 +94,7 @@ enum {
     CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE = 22, // 11 bits per channel * 16 channels = 22 bytes.
     CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
     CRSF_FRAME_PATS_PAYLOAD_SIZE = 7,
+    CRSF_FRAME_PATS_FLIGHT_PAYLOAD_SIZE = 6,
 };
 
 enum {
@@ -127,4 +131,3 @@ typedef enum {
     CRSF_ADDRESS_CRSF_RECEIVER = 0xEC,
     CRSF_ADDRESS_CRSF_TRANSMITTER = 0xEE
 } crsfAddress_e;
-

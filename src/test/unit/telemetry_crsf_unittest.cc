@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 
 #include <limits.h>
 
@@ -62,6 +63,7 @@ extern "C" {
     #include "telemetry/crsf.h"
     #include "telemetry/telemetry.h"
     #include "telemetry/msp_shared.h"
+    #include "telemetry/pats_flight.h"
 
     rssiSource_e rssiSource;
     bool airMode;
@@ -73,6 +75,7 @@ extern "C" {
     serialPort_t *telemetrySharedPort;
 
     int getCrsfFrame(uint8_t *frame, crsfFrameType_e frameType);
+    extern quaternion testQuaternion;
 
     PG_REGISTER(batteryConfig_t, batteryConfig, PG_BATTERY_CONFIG, 0);
     PG_REGISTER(telemetryConfig_t, telemetryConfig, PG_TELEMETRY_CONFIG, 0);
@@ -242,6 +245,208 @@ TEST(TelemetryCrsfTest, TestPats)
     EXPECT_EQ(crfsCrc(frame, frameLen), frame[10]);
 }
 
+TEST(TelemetryCrsfTest, TestPatsFlightPayloadBitLayout)
+{
+    const uint8_t payload[PATS_FLIGHT_PAYLOAD_SIZE] = {0x2D, 0x4A, 0xB5, 0x87, 0x52, 0xBB};
+    decodedPatsFlightTelemetry_t decoded;
+
+    ASSERT_TRUE(decodePatsFlightPayload(payload, &decoded));
+    EXPECT_FALSE(decoded.armed);
+    EXPECT_EQ(5, decoded.armingFailureReason);
+    EXPECT_EQ(2, decoded.largestQuatIndex);
+    EXPECT_EQ(0xA5, decoded.quatComponent[0]);
+    EXPECT_EQ(0x5A, decoded.quatComponent[1]);
+    EXPECT_EQ(0xC3, decoded.quatComponent[2]);
+    EXPECT_EQ(0x2A, decoded.accelerationXCode);
+    EXPECT_EQ(0x15, decoded.accelerationYCode);
+    EXPECT_EQ(0x1B, decoded.accelerationZCode);
+}
+
+TEST(TelemetryCrsfTest, TestPatsFlightArmingMapping)
+{
+    EXPECT_EQ(PATS_ARMING_FAILURE_NONE_UNKNOWN, patsArmingFailureReasonFromFlags((armingDisableFlags_e)0));
+    EXPECT_EQ(PATS_ARMING_FAILURE_NO_GYRO, patsArmingFailureReasonFromFlags(ARMING_DISABLED_NO_GYRO));
+    EXPECT_EQ(PATS_ARMING_FAILURE_FAILSAFE, patsArmingFailureReasonFromFlags(ARMING_DISABLED_FAILSAFE));
+    EXPECT_EQ(PATS_ARMING_FAILURE_RX, patsArmingFailureReasonFromFlags(ARMING_DISABLED_BAD_RX_RECOVERY));
+    EXPECT_EQ(PATS_ARMING_FAILURE_THROTTLE, patsArmingFailureReasonFromFlags(ARMING_DISABLED_THROTTLE));
+    EXPECT_EQ(PATS_ARMING_FAILURE_ANGLE, patsArmingFailureReasonFromFlags(ARMING_DISABLED_ANGLE));
+    EXPECT_EQ(PATS_ARMING_FAILURE_BOOT_GRACE_TIME, patsArmingFailureReasonFromFlags(ARMING_DISABLED_BOOT_GRACE_TIME));
+    EXPECT_EQ(PATS_ARMING_FAILURE_NOPREARM, patsArmingFailureReasonFromFlags(ARMING_DISABLED_NOPREARM));
+    EXPECT_EQ(PATS_ARMING_FAILURE_LOAD, patsArmingFailureReasonFromFlags(ARMING_DISABLED_LOAD));
+    EXPECT_EQ(PATS_ARMING_FAILURE_CALIBRATING, patsArmingFailureReasonFromFlags(ARMING_DISABLED_CALIBRATING));
+    EXPECT_EQ(PATS_ARMING_FAILURE_CONFIG, patsArmingFailureReasonFromFlags(ARMING_DISABLED_CLI));
+    EXPECT_EQ(PATS_ARMING_FAILURE_GPS_RESCUE, patsArmingFailureReasonFromFlags(ARMING_DISABLED_GPS));
+    EXPECT_EQ(PATS_ARMING_FAILURE_CRASH, patsArmingFailureReasonFromFlags(ARMING_DISABLED_CRASH_DETECTED));
+    EXPECT_EQ(PATS_ARMING_FAILURE_MOTOR, patsArmingFailureReasonFromFlags(ARMING_DISABLED_MOTOR_PROTOCOL));
+    EXPECT_EQ(PATS_ARMING_FAILURE_SYSTEM, patsArmingFailureReasonFromFlags(ARMING_DISABLED_ARM_SWITCH));
+    EXPECT_EQ(PATS_ARMING_FAILURE_UNKNOWN, patsArmingFailureReasonFromFlags((armingDisableFlags_e)(1u << 30)));
+
+    patsFlightTelemetryState_t state = {};
+    state.armed = true;
+    state.armingFailureReason = PATS_ARMING_FAILURE_THROTTLE;
+    state.attitudeValid = true;
+    state.quaternionW = 1.0f;
+    const patsFlightPayload_t encoded = encodePatsFlightPayload(&state);
+
+    decodedPatsFlightTelemetry_t decoded;
+    ASSERT_TRUE(decodePatsFlightPayload(encoded.bytes, &decoded));
+    EXPECT_TRUE(decoded.armed);
+    EXPECT_EQ(0, decoded.armingFailureReason);
+}
+
+TEST(TelemetryCrsfTest, TestPatsFlightQuaternionCodec)
+{
+    patsFlightTelemetryState_t state = {};
+    state.attitudeValid = true;
+    state.quaternionW = -1.0f;
+    patsFlightPayload_t negativeIdentity = encodePatsFlightPayload(&state);
+
+    state.quaternionW = 1.0f;
+    patsFlightPayload_t positiveIdentity = encodePatsFlightPayload(&state);
+    EXPECT_EQ(0, memcmp(negativeIdentity.bytes, positiveIdentity.bytes, PATS_FLIGHT_PAYLOAD_SIZE));
+
+    state.quaternionW = 0.1f;
+    state.quaternionX = 0.9f;
+    state.quaternionY = 0.2f;
+    state.quaternionZ = -0.3f;
+    patsFlightPayload_t largestX = encodePatsFlightPayload(&state);
+    decodedPatsFlightTelemetry_t decoded;
+    ASSERT_TRUE(decodePatsFlightPayload(largestX.bytes, &decoded));
+    EXPECT_EQ(1, decoded.largestQuatIndex);
+    EXPECT_NEAR(1.0f, sqrtf(decoded.quaternionW * decoded.quaternionW + decoded.quaternionX * decoded.quaternionX + decoded.quaternionY * decoded.quaternionY + decoded.quaternionZ * decoded.quaternionZ), 0.0001f);
+
+    state.quaternionW = 0.5f;
+    state.quaternionX = 0.5f;
+    state.quaternionY = 0.5f;
+    state.quaternionZ = 0.5f;
+    patsFlightPayload_t tie = encodePatsFlightPayload(&state);
+    ASSERT_TRUE(decodePatsFlightPayload(tie.bytes, &decoded));
+    EXPECT_EQ(0, decoded.largestQuatIndex);
+}
+
+TEST(TelemetryCrsfTest, TestPatsFlightAccelerationCodec)
+{
+    EXPECT_EQ(0, patsFlightEncodeAcceleration6(0.0f, false));
+    EXPECT_EQ(1, patsFlightEncodeAcceleration6(-7.75f, true));
+    EXPECT_EQ(2, patsFlightEncodeAcceleration6(-7.50f, true));
+    EXPECT_EQ(28, patsFlightEncodeAcceleration6(-1.00f, true));
+    EXPECT_EQ(31, patsFlightEncodeAcceleration6(-0.25f, true));
+    EXPECT_EQ(32, patsFlightEncodeAcceleration6(0.00f, true));
+    EXPECT_EQ(33, patsFlightEncodeAcceleration6(0.25f, true));
+    EXPECT_EQ(36, patsFlightEncodeAcceleration6(1.00f, true));
+    EXPECT_EQ(62, patsFlightEncodeAcceleration6(7.50f, true));
+    EXPECT_EQ(63, patsFlightEncodeAcceleration6(7.75f, true));
+    EXPECT_EQ(0, patsFlightEncodeAcceleration6(NAN, true));
+    EXPECT_EQ(0, patsFlightEncodeAcceleration6(INFINITY, true));
+    EXPECT_EQ(0, patsFlightEncodeAcceleration6(-INFINITY, true));
+
+    EXPECT_EQ(0, patsFlightEncodeAcceleration5(0.0f, false));
+    EXPECT_EQ(1, patsFlightEncodeAcceleration5(-3.75f, true));
+    EXPECT_EQ(2, patsFlightEncodeAcceleration5(-3.50f, true));
+    EXPECT_EQ(12, patsFlightEncodeAcceleration5(-1.00f, true));
+    EXPECT_EQ(15, patsFlightEncodeAcceleration5(-0.25f, true));
+    EXPECT_EQ(16, patsFlightEncodeAcceleration5(0.00f, true));
+    EXPECT_EQ(17, patsFlightEncodeAcceleration5(0.25f, true));
+    EXPECT_EQ(20, patsFlightEncodeAcceleration5(1.00f, true));
+    EXPECT_EQ(30, patsFlightEncodeAcceleration5(3.50f, true));
+    EXPECT_EQ(31, patsFlightEncodeAcceleration5(3.75f, true));
+
+    patsDecodedAcceleration_t decoded = patsFlightDecodeAcceleration6(63);
+    EXPECT_EQ(PATS_ACCELERATION_POSITIVE_OVERFLOW, decoded.status);
+    EXPECT_FLOAT_EQ(7.5f, decoded.valueG);
+    decoded = patsFlightDecodeAcceleration5(1);
+    EXPECT_EQ(PATS_ACCELERATION_NEGATIVE_OVERFLOW, decoded.status);
+    EXPECT_FLOAT_EQ(-3.5f, decoded.valueG);
+}
+
+#if defined(USE_ACC)
+TEST(TelemetryCrsfTest, TestPatsFlightFcSnapshotUsesAccelerometer)
+{
+    acc.isAccelUpdatedAtLeastOnce = true;
+    acc.dev.acc_1G = 512;
+    acc.dev.acc_1G_rec = 1.0f / acc.dev.acc_1G;
+    acc.accADC[X] = 512.0f;
+    acc.accADC[Y] = -512.0f;
+    acc.accADC[Z] = 128.0f;
+
+    patsFlightTelemetryState_t state = {};
+    patsFlightTelemetryStateFromFc(&state);
+
+    EXPECT_TRUE(state.accelerationValid);
+    EXPECT_FLOAT_EQ(1.0f, state.accelerationXG);
+    EXPECT_FLOAT_EQ(-1.0f, state.accelerationYG);
+    EXPECT_FLOAT_EQ(0.25f, state.accelerationZG);
+
+    memset(&acc, 0, sizeof(acc));
+}
+#endif
+
+TEST(TelemetryCrsfTest, TestPatsFlightCrsfGoldenFrames)
+{
+    const uint8_t golden[][PATS_FLIGHT_CRSF_FRAME_SIZE] = {
+        {0xC8, 0x08, 0x22, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x3B},
+        {0xC8, 0x08, 0x22, 0x83, 0x25, 0x48, 0x91, 0x23, 0x91, 0x67},
+        {0xC8, 0x08, 0x22, 0x67, 0x4A, 0x8F, 0x94, 0x0F, 0xFF, 0xDB},
+    };
+
+    patsFlightTelemetryState_t state = {};
+    state.attitudeValid = true;
+    state.quaternionW = 1.0f;
+    uint8_t frame[PATS_FLIGHT_CRSF_FRAME_SIZE];
+    size_t frameSize = 0;
+    ASSERT_TRUE(buildPatsFlightCrsfFrame(&state, frame, sizeof(frame), &frameSize));
+    EXPECT_EQ(PATS_FLIGHT_CRSF_FRAME_SIZE, frameSize);
+    EXPECT_EQ(0, memcmp(golden[0], frame, PATS_FLIGHT_CRSF_FRAME_SIZE));
+
+    testQuaternion = { 1.0f, 0.0f, 0.0f, 0.0f };
+    DISABLE_ARMING_FLAG(ARMED);
+    EXPECT_EQ(PATS_FLIGHT_CRSF_FRAME_SIZE, getCrsfFrame(frame, CRSF_FRAMETYPE_PATS_FLIGHT));
+    EXPECT_EQ(0, memcmp(golden[0], frame, PATS_FLIGHT_CRSF_FRAME_SIZE));
+
+    state.armed = true;
+    state.armingFailureReason = PATS_ARMING_FAILURE_RX;
+    state.quaternionW = 0.1f;
+    state.quaternionX = 0.9f;
+    state.quaternionY = 0.2f;
+    state.quaternionZ = -0.3f;
+    state.accelerationXG = 1.0f;
+    state.accelerationYG = -1.0f;
+    state.accelerationZG = 0.25f;
+    state.accelerationValid = true;
+    ASSERT_TRUE(buildPatsFlightCrsfFrame(&state, frame, sizeof(frame), &frameSize));
+    EXPECT_EQ(0, memcmp(golden[1], frame, PATS_FLIGHT_CRSF_FRAME_SIZE));
+
+    state.armed = false;
+    state.armingFailureReason = PATS_ARMING_FAILURE_CRASH;
+    state.quaternionW = -0.2f;
+    state.quaternionX = 0.3f;
+    state.quaternionY = -0.4f;
+    state.quaternionZ = -0.8f;
+    state.accelerationXG = -8.0f;
+    state.accelerationYG = 8.0f;
+    state.accelerationZG = 4.0f;
+    ASSERT_TRUE(buildPatsFlightCrsfFrame(&state, frame, sizeof(frame), &frameSize));
+    EXPECT_EQ(0, memcmp(golden[2], frame, PATS_FLIGHT_CRSF_FRAME_SIZE));
+
+    decodedPatsFlightTelemetry_t decoded;
+    ASSERT_TRUE(decodePatsFlightCrsfFrame(golden[1], PATS_FLIGHT_CRSF_FRAME_SIZE, &decoded));
+    EXPECT_TRUE(decoded.armed);
+    EXPECT_EQ(0, decoded.armingFailureReason);
+    EXPECT_EQ(PATS_ACCELERATION_NUMERIC, decoded.accelerationX.status);
+
+    uint8_t corrupt[PATS_FLIGHT_CRSF_FRAME_SIZE];
+    memcpy(corrupt, golden[1], sizeof(corrupt));
+    corrupt[4] ^= 0x01;
+    EXPECT_FALSE(decodePatsFlightCrsfFrame(corrupt, sizeof(corrupt), &decoded));
+    memcpy(corrupt, golden[1], sizeof(corrupt));
+    corrupt[9] ^= 0x01;
+    EXPECT_FALSE(decodePatsFlightCrsfFrame(corrupt, sizeof(corrupt), &decoded));
+    memcpy(corrupt, golden[1], sizeof(corrupt));
+    corrupt[1] = 0x07;
+    EXPECT_FALSE(decodePatsFlightCrsfFrame(corrupt, sizeof(corrupt), &decoded));
+    EXPECT_FALSE(decodePatsFlightCrsfFrame(golden[1], PATS_FLIGHT_CRSF_FRAME_SIZE - 1, &decoded));
+}
+
 TEST(TelemetryCrsfTest, TestFlightMode)
 {
     uint8_t frame[CRSF_FRAME_SIZE_MAX];
@@ -335,6 +540,8 @@ uint16_t batteryWarningVoltage;
 uint8_t useHottAlarmSoundPeriod (void) { return 0; }
 
 attitudeEulerAngles_t attitude = { { 0, 0, 0 } };     // absolute angle inclination in multiple of 0.1 degree    180 deg = 1800
+quaternion testQuaternion = { 1.0f, 0.0f, 0.0f, 0.0f };
+acc_t acc;
 
 uint16_t GPS_distanceToHome;        // distance to home point in meters
 gpsSolutionData_t gpsSol;
@@ -365,6 +572,11 @@ bool telemetryIsSensorEnabled(sensor_e) {return true;}
 portSharing_e determinePortSharing(const serialPortConfig_t *, serialPortFunction_e) {return PORTSHARING_NOT_SHARED;}
 
 bool airmodeIsEnabled(void) {return airMode;}
+
+void getQuaternion(quaternion *quat)
+{
+    *quat = testQuaternion;
+}
 
 int32_t getAmperage(void)
 {

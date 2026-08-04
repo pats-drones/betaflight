@@ -309,6 +309,7 @@ sensor_gyro_unittest_SRC := \
 telemetry_crsf_unittest_SRC := \
 		$(USER_DIR)/rx/crsf.c \
 		$(USER_DIR)/telemetry/crsf.c \
+		$(USER_DIR)/telemetry/pats_flight.c \
 		$(USER_DIR)/common/crc.c \
 		$(USER_DIR)/common/maths.c \
 		$(USER_DIR)/common/streambuf.c \
@@ -436,6 +437,7 @@ rx_spi_expresslrs_unittest_DEFINES := \
 rx_spi_expresslrs_telemetry_unittest_SRC := \
 		$(USER_DIR)/rx/crsf.c \
 		$(USER_DIR)/telemetry/crsf.c \
+		$(USER_DIR)/telemetry/pats_flight.c \
 		$(USER_DIR)/common/crc.c \
 		$(USER_DIR)/common/maths.c \
 		$(USER_DIR)/common/streambuf.c \
