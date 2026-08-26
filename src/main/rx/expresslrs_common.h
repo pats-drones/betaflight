@@ -192,7 +192,7 @@ typedef struct elrsOtaPacket_s {
                     uint8_t lq : 7,
                             mspConfirm : 1;
                     int8_t SNR;
-                    uint8_t free;
+                    uint8_t battery;
                 } ul_link_stats;
                 uint8_t payload[ELRS_TELEMETRY_BYTES_PER_CALL];
             };

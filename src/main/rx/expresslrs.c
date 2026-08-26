@@ -70,6 +70,8 @@
 #include "rx/expresslrs_impl.h"
 #include "rx/expresslrs_telemetry.h"
 
+#include "sensors/battery.h"
+
 UNIT_TESTED elrsReceiver_t receiver;
 static const uint8_t BindingUID[6] = {0,1,2,3,4,5}; // Special binding UID values
 static uint16_t crcInitializer = 0;
@@ -182,6 +184,29 @@ static uint8_t nextTelemetryType = ELRS_TELEMETRY_TYPE_LINK;
 static uint8_t telemetryBurstCount = 1;
 static uint8_t telemetryBurstMax = 1;
 static bool telemBurstValid = false;
+
+// Creates a coding system for the battery voltage - gives with 0.01v resolution
+// for the range 2v - 4.5v, which is good for normal flight. Also leaves 5 codes 
+// for errors that can occur, in the space of [251..255]. 3 are already used for
+// cases like no battery, and being out of range on both sides. 
+// Takes advantage of the remaining free byte in the LINK Telem packet. 
+static uint8_t customLINKdataFromPATS(void) 
+{
+    const batteryState_e batteryState = getBatteryState();
+    uint16_t cellVoltage = getBatteryAverageCellVoltage(); 
+    uint8_t batteryCode;
+
+    if (batteryState == BATTERY_NOT_PRESENT)
+        batteryCode = 251U;
+    else if (cellVoltage < 200U)
+        batteryCode = 252U;
+    else if (cellVoltage > 450U)
+        batteryCode = 253U;
+    else {
+        batteryCode = cellVoltage - 200U;
+    }
+    return (uint8_t)(batteryCode);
+}
 
 // Maximum ms between LINK_STATISTICS packets for determining burst max
 #define TELEM_MIN_LINK_INTERVAL 512U
@@ -411,6 +436,7 @@ static void expressLrsSendTelemResp(void)
         otaPkt.tlm_dl.ul_link_stats.modelMatch = connectionHasModelMatch;
         otaPkt.tlm_dl.ul_link_stats.lq = receiver.uplinkLQ;
         otaPkt.tlm_dl.ul_link_stats.SNR = meanAccumulatorCalc(&snrFilter, -16);
+        otaPkt.tlm_dl.ul_link_stats.battery = customLINKdataFromPATS();
 #ifdef USE_MSP_OVER_TELEMETRY
         otaPkt.tlm_dl.ul_link_stats.mspConfirm = getCurrentMspConfirm() ? 1 : 0;
 #else
