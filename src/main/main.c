@@ -23,27 +23,76 @@
 
 #include "platform.h"
 
+#include "config/feature.h"
+
+#include "drivers/motor.h"
+#include "drivers/pwm_output.h"
+#include "drivers/time.h"
+#ifdef USE_DSHOT_BITBANG
+#include "drivers/dshot_bitbang.h"
+#endif
+
 #include "fc/init.h"
+#include "fc/rc_controls.h"
+#include "fc/runtime_config.h"
 
-#include "scheduler/scheduler.h"
+#include "flight/mixer.h"
 
-void run(void);
+#include "pg/motor.h"
+
+static void configureDshot300(void)
+{
+    motorDevConfig_t *motorDevConfig = &motorConfigMutable()->dev;
+
+    motorDevConfig->motorPwmProtocol = PWM_TYPE_DSHOT300;
+    motorDevConfig->useUnsyncedPwm = false;
+#ifdef USE_DSHOT_DMAR
+    motorDevConfig->useBurstDshot = DSHOT_DMAR_OFF;
+#else
+    motorDevConfig->useBurstDshot = 0;
+#endif
+    motorDevConfig->useDshotTelemetry = false;
+    motorDevConfig->useDshotEdt = false;
+#ifdef USE_DSHOT_BITBANG
+    motorDevConfig->useDshotBitbang = DSHOT_BITBANG_OFF;
+    motorDevConfig->useDshotBitbangedTimer = DSHOT_BITBANGED_TIMER_AUTO;
+#endif
+
+    motorShutdown();
+
+    uint16_t idlePulse = motorConfig()->mincommand;
+    if (featureIsEnabled(FEATURE_3D)) {
+        idlePulse = flight3DConfig()->neutral3d;
+    }
+
+    motorDevInit(motorDevConfig, idlePulse, getMotorCount());
+    motorEnable();
+}
+
+static void runConstantDshotStream(void)
+{
+    const uint8_t motorCount = motorDeviceCount();
+    if (motorCount == 0) {
+        while (true) {
+            delay(100);
+        }
+    }
+
+    float outputs[MAX_SUPPORTED_MOTORS];
+    for (uint8_t i = 0; i < motorCount; i++) {
+        outputs[i] = 1000.0f;
+    }
+
+    while (true) {
+        motorWriteAll(outputs);
+        delayMicroseconds(50);
+    }
+}
 
 int main(void)
 {
     init();
-
-    run();
-
+    configureDshot300();
+    runConstantDshotStream();
     return 0;
-}
-
-void FAST_CODE run(void)
-{
-    while (true) {
-        scheduler();
-#ifdef SIMULATOR_BUILD
-        delayMicroseconds_real(50); // max rate 20kHz
-#endif
-    }
 }
