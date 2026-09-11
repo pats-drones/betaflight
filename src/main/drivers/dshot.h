@@ -35,6 +35,8 @@
 #define MIN_GCR_EDGES                   (7)
 #define MAX_GCR_EDGES                   (22)
 
+#define PATS_FLIGHT_MOTOR_SPINUP_eRPM   (360)
+
 // comment out to see frame dump of corrupted frames in dshot_telemetry_info
 //#define DEBUG_BBDECODE
 
@@ -94,6 +96,7 @@ typedef struct dshotTelemetryMotorState_s {
     uint16_t telemetryData[DSHOT_TELEMETRY_TYPE_COUNT];
     uint8_t telemetryTypes;
     uint8_t maxTemp;
+    float ewmAverage;
 } dshotTelemetryMotorState_t;
 
 
@@ -117,6 +120,7 @@ void updateDshotTelemetryQuality(dshotTelemetryQuality_t *qualityStats, bool pac
 uint16_t getDshotTelemetry(uint8_t index);
 uint32_t erpmToRpm(uint16_t erpm);
 uint32_t getDshotAverageRpm(void);
+uint16_t getDshotMotorAverageRpm(uint8_t index);
 bool isDshotMotorTelemetryActive(uint8_t motorIndex);
 bool isDshotTelemetryActive(void);
 
