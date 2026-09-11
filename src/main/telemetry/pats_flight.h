@@ -19,24 +19,18 @@
 
 #define PATS_FLIGHT_PAYLOAD_SIZE ((size_t)CRSF_FRAME_PATS_FLIGHT_PAYLOAD_SIZE)
 #define PATS_FLIGHT_CRSF_FRAME_SIZE (PATS_FLIGHT_PAYLOAD_SIZE + (size_t)CRSF_FRAME_LENGTH_NON_PAYLOAD)
+#define PATS_FLIGHT_MOTOR_SPINUP_RPM 800
 
+// PATS flight payload: quaternion (26), acceleration (17), armed (1), primary arming failure (3), all motors spun up (1).
 typedef enum {
-    PATS_ARMING_FAILURE_NONE_UNKNOWN = 0,
+    PATS_ARMING_FAILURE_NONE = 0,
     PATS_ARMING_FAILURE_NO_GYRO = 1,
     PATS_ARMING_FAILURE_FAILSAFE = 2,
     PATS_ARMING_FAILURE_RX = 3,
     PATS_ARMING_FAILURE_THROTTLE = 4,
     PATS_ARMING_FAILURE_ANGLE = 5,
-    PATS_ARMING_FAILURE_BOOT_GRACE_TIME = 6,
-    PATS_ARMING_FAILURE_NOPREARM = 7,
-    PATS_ARMING_FAILURE_LOAD = 8,
-    PATS_ARMING_FAILURE_CALIBRATING = 9,
-    PATS_ARMING_FAILURE_CONFIG = 10,
-    PATS_ARMING_FAILURE_GPS_RESCUE = 11,
-    PATS_ARMING_FAILURE_CRASH = 12,
-    PATS_ARMING_FAILURE_MOTOR = 13,
-    PATS_ARMING_FAILURE_SYSTEM = 14,
-    PATS_ARMING_FAILURE_UNKNOWN = 15,
+    PATS_ARMING_FAILURE_CONFIG = 6,
+    PATS_ARMING_FAILURE_SYSTEM = 7,
 } patsArmingFailureReason_e;
 
 typedef enum {
@@ -54,6 +48,7 @@ typedef struct {
 typedef struct {
     bool armed;
     uint8_t armingFailureReason;
+    bool allMotorsSpunUp;
 
     float quaternionW;
     float quaternionX;
@@ -69,13 +64,26 @@ typedef struct {
     bool accelerationValid;
 } patsFlightTelemetryState_t;
 
-typedef struct {
+typedef union {
+    struct {
+        uint8_t quaternionComponent0 : 8;
+        uint8_t quaternionComponent1 : 8;
+        uint8_t quaternionComponent2 : 8;
+        uint8_t accelerationX : 6,
+                largestQuatIndex : 2;
+        uint8_t accelerationY : 6,
+                allMotorsSpunUp : 1,
+                armed : 1;
+        uint8_t accelerationZ : 5,
+                armingFailureReason : 3;
+    } __attribute__ ((__packed__));
     uint8_t bytes[PATS_FLIGHT_PAYLOAD_SIZE];
-} patsFlightPayload_t;
+} __attribute__ ((__packed__)) patsFlightPayload_t;
 
 typedef struct {
     bool armed;
     uint8_t armingFailureReason;
+    bool allMotorsSpunUp;
     uint8_t largestQuatIndex;
     uint8_t quatComponent[3];
     uint8_t accelerationXCode;

@@ -19,6 +19,11 @@
 #include "common/axis.h"
 #include "common/maths.h"
 
+#ifdef USE_DSHOT_TELEMETRY
+#include "drivers/dshot.h"
+#include "drivers/motor.h"
+#endif
+
 #include "fc/runtime_config.h"
 #include "flight/imu.h"
 #include "sensors/acceleration.h"
@@ -27,10 +32,33 @@
 
 static const float kQuatLimit = 0.7071067811865475244f;
 
+#ifdef USE_DSHOT_TELEMETRY
+static uint16_t patsFlightMotorsSpunUp;
+
+static bool patsFlightMotorsHaveSpunUp(void)
+{
+    if (!useDshotTelemetry) {
+        return false;
+    }
+
+    uint16_t requiredMotors = 0;
+    const unsigned motorCount = motorDeviceCount();
+    for (unsigned motor = 0; motor < motorCount; motor++) {
+        const uint16_t motorBit = 1u << motor;
+        requiredMotors |= motorBit;
+        if (erpmToRpm(getDshotTelemetry(motor)) >= PATS_FLIGHT_MOTOR_SPINUP_RPM) {
+            patsFlightMotorsSpunUp |= motorBit;
+        }
+    }
+
+    return (patsFlightMotorsSpunUp & requiredMotors) == requiredMotors;
+}
+#endif
+
 uint8_t patsArmingFailureReasonFromFlags(armingDisableFlags_e flags)
 {
     if (!flags) {
-        return PATS_ARMING_FAILURE_NONE_UNKNOWN;
+        return PATS_ARMING_FAILURE_NONE;
     }
     if (flags & ARMING_DISABLED_NO_GYRO) {
         return PATS_ARMING_FAILURE_NO_GYRO;
@@ -47,35 +75,17 @@ uint8_t patsArmingFailureReasonFromFlags(armingDisableFlags_e flags)
     if (flags & ARMING_DISABLED_ANGLE) {
         return PATS_ARMING_FAILURE_ANGLE;
     }
-    if (flags & ARMING_DISABLED_BOOT_GRACE_TIME) {
-        return PATS_ARMING_FAILURE_BOOT_GRACE_TIME;
-    }
-    if (flags & ARMING_DISABLED_NOPREARM) {
-        return PATS_ARMING_FAILURE_NOPREARM;
-    }
-    if (flags & ARMING_DISABLED_LOAD) {
-        return PATS_ARMING_FAILURE_LOAD;
-    }
-    if (flags & ARMING_DISABLED_CALIBRATING) {
-        return PATS_ARMING_FAILURE_CALIBRATING;
-    }
     if (flags & (ARMING_DISABLED_CLI | ARMING_DISABLED_CMS_MENU | ARMING_DISABLED_MSP | ARMING_DISABLED_REBOOT_REQUIRED)) {
         return PATS_ARMING_FAILURE_CONFIG;
     }
-    if (flags & (ARMING_DISABLED_GPS | ARMING_DISABLED_RESC)) {
-        return PATS_ARMING_FAILURE_GPS_RESCUE;
-    }
-    if (flags & (ARMING_DISABLED_RUNAWAY_TAKEOFF | ARMING_DISABLED_CRASH_DETECTED)) {
-        return PATS_ARMING_FAILURE_CRASH;
-    }
-    if (flags & (ARMING_DISABLED_RPMFILTER | ARMING_DISABLED_DSHOT_BITBANG | ARMING_DISABLED_MOTOR_PROTOCOL)) {
-        return PATS_ARMING_FAILURE_MOTOR;
-    }
-    if (flags & (ARMING_DISABLED_BST | ARMING_DISABLED_PARALYZE | ARMING_DISABLED_ACC_CALIBRATION | ARMING_DISABLED_ARM_SWITCH)) {
+    if (flags & (ARMING_DISABLED_BOOT_GRACE_TIME | ARMING_DISABLED_NOPREARM | ARMING_DISABLED_LOAD | ARMING_DISABLED_CALIBRATING
+        | ARMING_DISABLED_GPS | ARMING_DISABLED_RESC | ARMING_DISABLED_RUNAWAY_TAKEOFF | ARMING_DISABLED_CRASH_DETECTED
+        | ARMING_DISABLED_RPMFILTER | ARMING_DISABLED_DSHOT_BITBANG | ARMING_DISABLED_MOTOR_PROTOCOL | ARMING_DISABLED_BST
+        | ARMING_DISABLED_PARALYZE | ARMING_DISABLED_ACC_CALIBRATION | ARMING_DISABLED_ARM_SWITCH)) {
         return PATS_ARMING_FAILURE_SYSTEM;
     }
 
-    return PATS_ARMING_FAILURE_UNKNOWN;
+    return PATS_ARMING_FAILURE_SYSTEM;
 }
 
 uint8_t patsFlightEncodeAcceleration6(float accelerationG, bool valid)
@@ -168,21 +178,25 @@ static float decodeQuatComponent(uint8_t encoded)
 
 patsFlightPayload_t encodePatsFlightPayload(const patsFlightTelemetryState_t *state)
 {
-    patsFlightPayload_t payload = { { 0 } };
-
-    const bool armed = state && state->armed;
-    const uint8_t armingFailureReason = state && state->armingFailureReason <= PATS_ARMING_FAILURE_UNKNOWN
-        ? state->armingFailureReason
-        : PATS_ARMING_FAILURE_UNKNOWN;
-    const uint8_t armingStatus = ((armed ? 1u : 0u) << 4) | (armed ? 0 : armingFailureReason);
-
-    float q[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
-    if (state && state->attitudeValid) {
-        q[0] = state->quaternionW;
-        q[1] = state->quaternionX;
-        q[2] = state->quaternionY;
-        q[3] = state->quaternionZ;
+    patsFlightPayload_t payload = { 0 };
+    if (!state) {
+        payload.armingFailureReason = PATS_ARMING_FAILURE_SYSTEM;
+        return payload;
     }
+    const bool armed = state->armed;
+    const bool allMotorsSpunUp = state->allMotorsSpunUp;
+    const uint8_t armingFailureReason = state->armingFailureReason <= PATS_ARMING_FAILURE_SYSTEM
+        ? state->armingFailureReason
+        : PATS_ARMING_FAILURE_SYSTEM;
+    payload.armed = armed;
+    payload.armingFailureReason = armed ? PATS_ARMING_FAILURE_NONE : armingFailureReason;
+    payload.allMotorsSpunUp = allMotorsSpunUp;
+
+    float q[4];
+    q[0] = state->quaternionW;
+    q[1] = state->quaternionX;
+    q[2] = state->quaternionY;
+    q[3] = state->quaternionZ;
     normalizeQuaternion(q);
 
     uint8_t largestQuatIndex = 0;
@@ -212,25 +226,19 @@ patsFlightPayload_t encodePatsFlightPayload(const patsFlightTelemetryState_t *st
     uint8_t accelerationX = 0;
     uint8_t accelerationY = 0;
     uint8_t accelerationZ = 0;
-    if (state && state->accelerationValid) {
+    if (state->accelerationValid) {
         accelerationX = patsFlightEncodeAcceleration6(state->accelerationXG, true);
         accelerationY = patsFlightEncodeAcceleration6(state->accelerationYG, true);
         accelerationZ = patsFlightEncodeAcceleration5(state->accelerationZG, true);
     }
 
-    const uint64_t packed =
-        ((uint64_t)(armingStatus & 0x1F) << 43) |
-        ((uint64_t)(largestQuatIndex & 0x03) << 41) |
-        ((uint64_t)(quatComponent[0] & 0xFF) << 33) |
-        ((uint64_t)(quatComponent[1] & 0xFF) << 25) |
-        ((uint64_t)(quatComponent[2] & 0xFF) << 17) |
-        ((uint64_t)(accelerationX & 0x3F) << 11) |
-        ((uint64_t)(accelerationY & 0x3F) << 5) |
-        ((uint64_t)(accelerationZ & 0x1F));
-
-    for (size_t ii = 0; ii < PATS_FLIGHT_PAYLOAD_SIZE; ++ii) {
-        payload.bytes[ii] = (uint8_t)((packed >> (40 - 8 * ii)) & 0xFF);
-    }
+    payload.largestQuatIndex = largestQuatIndex;
+    payload.quaternionComponent0 = quatComponent[0];
+    payload.quaternionComponent1 = quatComponent[1];
+    payload.quaternionComponent2 = quatComponent[2];
+    payload.accelerationX = accelerationX;
+    payload.accelerationY = accelerationY;
+    payload.accelerationZ = accelerationZ;
 
     return payload;
 }
@@ -241,25 +249,23 @@ bool decodePatsFlightPayload(const uint8_t payload[PATS_FLIGHT_PAYLOAD_SIZE], de
         return false;
     }
 
-    uint64_t packed = 0;
-    for (size_t ii = 0; ii < PATS_FLIGHT_PAYLOAD_SIZE; ++ii) {
-        packed = (packed << 8) | payload[ii];
-    }
+    patsFlightPayload_t packed;
+    memcpy(packed.bytes, payload, PATS_FLIGHT_PAYLOAD_SIZE);
 
     memset(output, 0, sizeof(*output));
-    const uint8_t armingStatus = (packed >> 43) & 0x1F;
-    output->armed = (armingStatus & 0x10) != 0;
-    output->armingFailureReason = armingStatus & 0x0F;
+    output->armed = packed.armed;
+    output->armingFailureReason = packed.armingFailureReason;
+    output->allMotorsSpunUp = packed.allMotorsSpunUp;
     if (output->armed) {
-        output->armingFailureReason = 0;
+        output->armingFailureReason = PATS_ARMING_FAILURE_NONE;
     }
-    output->largestQuatIndex = (packed >> 41) & 0x03;
-    output->quatComponent[0] = (packed >> 33) & 0xFF;
-    output->quatComponent[1] = (packed >> 25) & 0xFF;
-    output->quatComponent[2] = (packed >> 17) & 0xFF;
-    output->accelerationXCode = (packed >> 11) & 0x3F;
-    output->accelerationYCode = (packed >> 5) & 0x3F;
-    output->accelerationZCode = packed & 0x1F;
+    output->largestQuatIndex = packed.largestQuatIndex;
+    output->quatComponent[0] = packed.quaternionComponent0;
+    output->quatComponent[1] = packed.quaternionComponent1;
+    output->quatComponent[2] = packed.quaternionComponent2;
+    output->accelerationXCode = packed.accelerationX;
+    output->accelerationYCode = packed.accelerationY;
+    output->accelerationZCode = packed.accelerationZ;
 
     float q[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     float stored[3] = {
@@ -331,20 +337,25 @@ bool decodePatsFlightCrsfFrame(const uint8_t *frame, size_t frameSize, decodedPa
 
 void patsFlightTelemetryStateFromFc(patsFlightTelemetryState_t *state)
 {
-    if (!state) {
-        return;
-    }
-
+    
     quaternion quat;
     getQuaternion(&quat);
-
+    bool allMotorsSpunUp = false;    
+    
     state->armed = ARMING_FLAG(ARMED);
-    state->armingFailureReason = state->armed ? PATS_ARMING_FAILURE_NONE_UNKNOWN : patsArmingFailureReasonFromFlags(getArmingDisableFlags());
+    
+    if (state->armed) {
+        allMotorsSpunUp = patsFlightMotorsHaveSpunUp();
+    } else {
+        patsFlightMotorsSpunUp = 0;
+    }
+
+    state->armingFailureReason = state->armed ? PATS_ARMING_FAILURE_NONE : patsArmingFailureReasonFromFlags(getArmingDisableFlags());
+    state->allMotorsSpunUp = allMotorsSpunUp;
     state->quaternionW = quat.w;
     state->quaternionX = quat.x;
     state->quaternionY = quat.y;
     state->quaternionZ = quat.z;
-    state->attitudeValid = true;
     state->accelerationXG = 0.0f;
     state->accelerationYG = 0.0f;
     state->accelerationZG = 0.0f;
