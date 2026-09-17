@@ -33,7 +33,6 @@
 static const float kQuatLimit = 0.7071067811865475244f;
 
 #ifdef USE_DSHOT_TELEMETRY
-static uint16_t patsFlightMotorsSpunUp;
 
 static bool patsFlightMotorsHaveSpunUp(void)
 {
@@ -41,17 +40,14 @@ static bool patsFlightMotorsHaveSpunUp(void)
         return false;
     }
 
-    uint16_t requiredMotors = 0;
     const unsigned motorCount = motorDeviceCount();
     for (unsigned motor = 0; motor < motorCount; motor++) {
-        const uint16_t motorBit = 1u << motor;
-        requiredMotors |= motorBit;
         if (erpmToRpm(getDshotTelemetry(motor)) >= PATS_FLIGHT_MOTOR_SPINUP_RPM) {
-            patsFlightMotorsSpunUp |= motorBit;
+            return false;
         }
     }
 
-    return (patsFlightMotorsSpunUp & requiredMotors) == requiredMotors;
+    return true;
 }
 #endif
 
@@ -340,18 +336,10 @@ void patsFlightTelemetryStateFromFc(patsFlightTelemetryState_t *state)
     
     quaternion quat;
     getQuaternion(&quat);
-    bool allMotorsSpunUp = false;    
     
     state->armed = ARMING_FLAG(ARMED);
-    
-    if (state->armed) {
-        allMotorsSpunUp = patsFlightMotorsHaveSpunUp();
-    } else {
-        patsFlightMotorsSpunUp = 0;
-    }
-
     state->armingFailureReason = state->armed ? PATS_ARMING_FAILURE_NONE : patsArmingFailureReasonFromFlags(getArmingDisableFlags());
-    state->allMotorsSpunUp = allMotorsSpunUp;
+    state->allMotorsSpunUp = patsFlightMotorsHaveSpunUp();
     state->quaternionW = quat.w;
     state->quaternionX = quat.x;
     state->quaternionY = quat.y;

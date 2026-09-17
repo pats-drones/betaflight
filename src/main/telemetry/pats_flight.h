@@ -19,7 +19,7 @@
 
 #define PATS_FLIGHT_PAYLOAD_SIZE ((size_t)CRSF_FRAME_PATS_FLIGHT_PAYLOAD_SIZE)
 #define PATS_FLIGHT_CRSF_FRAME_SIZE (PATS_FLIGHT_PAYLOAD_SIZE + (size_t)CRSF_FRAME_LENGTH_NON_PAYLOAD)
-#define PATS_FLIGHT_MOTOR_SPINUP_RPM 800
+#define PATS_FLIGHT_MOTOR_SPINUP_RPM 5000
 
 // PATS flight payload: quaternion (26), acceleration (17), armed (1), primary arming failure (3), all motors spun up (1).
 typedef enum {
