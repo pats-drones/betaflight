@@ -51,7 +51,6 @@ static bool patsFlightMotorsHaveSpunUp(void)
             allMotorsSpunUp = false;
         }
     }
-
     return allMotorsSpunUp;
 }
 #endif
@@ -242,7 +241,7 @@ patsFlightPayload_t encodePatsFlightPayload(const patsFlightTelemetryState_t *st
     payload.accelerationZ = accelerationZ;
 
     for (size_t ii = 0; ii < 4; ii++) {
-        payload.bytes[ii] = (uint8_t)(erpmToRpm(getDshotTelemetry(ii)) / 500);
+        payload.bytes[ii] = (uint8_t)(getDshotTelemetry(ii)/100);
     }
 
     return payload;
