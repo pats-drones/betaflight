@@ -31,6 +31,8 @@
 #include "telemetry/pats_flight.h"
 
 static const float kQuatLimit = 0.7071067811865475244f;
+static const float spinupExpAlpha = 0.00498752080731768f;
+static float motorRPMavg[4] = {0.0f};
 
 #ifdef USE_DSHOT_TELEMETRY
 
@@ -41,13 +43,16 @@ static bool patsFlightMotorsHaveSpunUp(void)
     }
 
     const unsigned motorCount = motorDeviceCount();
+    bool allMotorsSpunUp = true;
     for (unsigned motor = 0; motor < motorCount; motor++) {
-        if (erpmToRpm(getDshotTelemetry(motor)) >= PATS_FLIGHT_MOTOR_SPINUP_RPM) {
-            return false;
+        float rpm = (float)(erpmToRpm(getDshotTelemetry(motor)));
+        motorRPMavg[motor] += spinupExpAlpha * (rpm - motorRPMavg[motor]);
+        if (motorRPMavg[motor] <= PATS_FLIGHT_MOTOR_SPINUP_RPM) {
+            allMotorsSpunUp = false;
         }
     }
 
-    return true;
+    return allMotorsSpunUp;
 }
 #endif
 
