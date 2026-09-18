@@ -242,7 +242,7 @@ patsFlightPayload_t encodePatsFlightPayload(const patsFlightTelemetryState_t *st
 
     for (size_t ii = 0; ii < 4; ii++) {
         // payload.bytes[ii] = (uint8_t)(getDshotTelemetry(ii)/100);
-        payload.bytes[ii] = (uint8_t)(motorRPMavg[ii]/1000);
+        payload.bytes[ii] = (uint8_t)(motorRPMavg[ii]/256);
     }
 
     return payload;
