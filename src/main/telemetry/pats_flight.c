@@ -32,7 +32,8 @@
 
 static const float kQuatLimit = 0.7071067811865475244f;
 static const float spinupExpAlpha = 0.00498752080731768f;
-static float motorRPMavg[4] = {0.0f};
+static const int PATS_FLIGHT_MOTOR_SPINUP_eRPM = 300;
+static uint16_t motorRPMavg[4] = {0,0,0,0};
 
 #ifdef USE_DSHOT_TELEMETRY
 
@@ -45,9 +46,9 @@ static bool patsFlightMotorsHaveSpunUp(void)
     const unsigned motorCount = motorDeviceCount();
     bool allMotorsSpunUp = true;
     for (unsigned motor = 0; motor < motorCount; motor++) {
-        float rpm = (float)(erpmToRpm(getDshotTelemetry(motor)));
-        motorRPMavg[motor] += spinupExpAlpha * (rpm - motorRPMavg[motor]);
-        if (motorRPMavg[motor] <= PATS_FLIGHT_MOTOR_SPINUP_RPM) {
+        uint16_t erpm = getDshotTelemetry(motor);
+        motorRPMavg[motor] += (uint16_t)(spinupExpAlpha * (float)(erpm - motorRPMavg[motor]));
+        if (motorRPMavg[motor] <= PATS_FLIGHT_MOTOR_SPINUP_eRPM) {
             allMotorsSpunUp = false;
         }
     }
@@ -245,10 +246,11 @@ patsFlightPayload_t encodePatsFlightPayload(const patsFlightTelemetryState_t *st
     //     // payload.bytes[ii] = (uint8_t)(motorRPMavg[ii]/256);
     // }
 
-    uint16_t erpmMotor0 = getDshotTelemetry(0); //16 bits each AAAABBBBCCCCZZZZ
-    uint16_t erpmMotor1 = getDshotTelemetry(1); //16 bits each DDDDEEEEFFFFZZZZ
-    uint16_t erpmMotor2 = getDshotTelemetry(2); //16 bits each 
-    uint16_t erpmMotor3 = getDshotTelemetry(3); //16 bits each
+    uint16_t erpmMotor0 = motorRPMavg[0]; // getDshotTelemetry(0); //16 bits each AAAABBBBCCCCZZZZ
+    uint16_t erpmMotor1 = motorRPMavg[1]; // getDshotTelemetry(1); //16 bits each DDDDEEEEFFFFZZZZ
+    uint16_t erpmMotor2 = motorRPMavg[2]; // getDshotTelemetry(2); //16 bits each 
+    uint16_t erpmMotor3 = motorRPMavg[3]; // getDshotTelemetry(3); //16 bits each
+
 
     payload.bytes[0] = (uint8_t)(erpmMotor0 >> 8); 
     payload.bytes[1] = (uint8_t)((erpmMotor0 & 0x00F0) | ((erpmMotor1 & 0xF000) >> 12));
