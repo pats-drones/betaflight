@@ -30,10 +30,11 @@
 
 #include "telemetry/pats_flight.h"
 
+// #define PATS_FLIGHT_MOTOR_SPINUP_eRPM   (300)
+
 static const float kQuatLimit = 0.7071067811865475244f;
-static const float spinupExpAlpha = 0.00498752080731768f;
-static const int PATS_FLIGHT_MOTOR_SPINUP_eRPM = 300;
-static uint16_t motorRPMavg[4] = {0,0,0,0};
+// static const float spinupExpAlpha = 0.00498752080731768f;
+// static uint16_t motorRPMavg[4] = {0,0,0,0};
 
 #ifdef USE_DSHOT_TELEMETRY
 
@@ -46,9 +47,12 @@ static bool patsFlightMotorsHaveSpunUp(void)
     const unsigned motorCount = motorDeviceCount();
     bool allMotorsSpunUp = true;
     for (unsigned motor = 0; motor < motorCount; motor++) {
-        uint16_t erpm = getDshotTelemetry(motor);
-        motorRPMavg[motor] += (uint16_t)(spinupExpAlpha * (float)(erpm - motorRPMavg[motor]));
-        if (motorRPMavg[motor] <= PATS_FLIGHT_MOTOR_SPINUP_eRPM) {
+        // uint16_t erpm = getDshotTelemetry(motor);
+        // motorRPMavg[motor] += (uint16_t)(spinupExpAlpha * (float)(erpm - motorRPMavg[motor]));
+        // if (motorRPMavg[motor] <= PATS_FLIGHT_MOTOR_SPINUP_eRPM) {
+        //     allMotorsSpunUp = false;
+        // }
+        if (getDshotMotorAverageRpm(motor) < PATS_FLIGHT_MOTOR_SPINUP_eRPM) {
             allMotorsSpunUp = false;
         }
     }
@@ -253,7 +257,8 @@ patsFlightPayload_t encodePatsFlightPayload(const patsFlightTelemetryState_t *st
 
     uint8_t count_spun_up = 0;
     for (size_t ii = 0; ii < 4; ii++) {
-        if (motorRPMavg[ii] > PATS_FLIGHT_MOTOR_SPINUP_eRPM)
+        // if (motorRPMavg[ii] > PATS_FLIGHT_MOTOR_SPINUP_eRPM)
+        if (getDshotMotorAverageRpm(ii) > PATS_FLIGHT_MOTOR_SPINUP_eRPM)
             count_spun_up++;
     }
 
