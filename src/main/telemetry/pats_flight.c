@@ -250,11 +250,16 @@ patsFlightPayload_t encodePatsFlightPayload(const patsFlightTelemetryState_t *st
     //     // payload.bytes[ii] = (uint8_t)(motorRPMavg[ii]/256);
     // }
 
-    uint16_t erpmMotor0 = getDshotTelemetry(0); //16 bits each AAAABBBBCCCCZZZZ
-    uint16_t erpmMotor1 = getDshotTelemetry(1); //16 bits each DDDDEEEEFFFFZZZZ
-    uint16_t erpmMotor2 = getDshotTelemetry(2); //16 bits each 
-    uint16_t erpmMotor3 = getDshotTelemetry(3); //16 bits each
+    // uint16_t erpmMotor0 = getDshotTelemetry(0); //16 bits each AAAABBBBCCCCZZZZ
+    // uint16_t erpmMotor1 = getDshotTelemetry(1); //16 bits each DDDDEEEEFFFFZZZZ
+    // uint16_t erpmMotor2 = getDshotTelemetry(2); //16 bits each 
+    // uint16_t erpmMotor3 = getDshotTelemetry(3); //16 bits each
 
+    uint16_t erpmMotor0 = getDshotMotorAverageRpm(0);
+    uint16_t erpmMotor1 = getDshotMotorAverageRpm(1);
+    uint16_t erpmMotor2 = getDshotMotorAverageRpm(2);
+    uint16_t erpmMotor3 = getDshotMotorAverageRpm(3);
+    
     uint8_t count_spun_up = 0;
     for (size_t ii = 0; ii < 4; ii++) {
         // if (motorRPMavg[ii] > PATS_FLIGHT_MOTOR_SPINUP_eRPM)
@@ -263,7 +268,7 @@ patsFlightPayload_t encodePatsFlightPayload(const patsFlightTelemetryState_t *st
     }
 
     payload.bytes[0] = (uint8_t)(erpmMotor0 >> 8); 
-    payload.bytes[1] = (uint8_t)((erpmMotor0 & 0x00E0) | (armed ? 0x10 : 0x00) | ((erpmMotor1 & 0xF000) >> 12));
+    payload.bytes[1] = (uint8_t)((erpmMotor0 & 0x00E0) | ((count_spun_up & 0x03) == 0x03 ? 0x10 : 0x00) | ((erpmMotor1 & 0xF000) >> 12));
     payload.bytes[2] = (uint8_t)(((erpmMotor1 & 0x0FE0) >> 4) | (allMotorsSpunUp ? 0x01 : 0x00)); 
     payload.bytes[3] = (uint8_t)(erpmMotor2 >> 8); 
     payload.bytes[4] = (uint8_t)((erpmMotor2 & 0x00E0) | ((count_spun_up & 0x02) == 0x02 ? 0x10 : 0x00) | ((erpmMotor3 & 0xF000) >> 12));

@@ -47,7 +47,7 @@
 #include "rx/rx.h"
 #include "dshot.h"
 
-static const float spinupExpAlpha = 0.00498752080731768f;
+static const float spinupExpAlpha = 0.0246900879716674f;
 
 void dshotInitEndpoints(const motorConfig_t *motorConfig, float outputLimit, float *outputLow, float *outputHigh, float *disarm, float *deadbandMotor3dHigh, float *deadbandMotor3dLow)
 {
@@ -253,7 +253,9 @@ static void dshotUpdateTelemetryData(uint8_t motorIndex, dshotTelemetryType_t ty
     dshotTelemetryState.motorState[motorIndex].telemetryTypes |= (1 << type);
 
     if (type == DSHOT_TELEMETRY_TYPE_eRPM) {
-        dshotTelemetryState.motorState[motorIndex].ewmAverage += (uint16_t)(spinupExpAlpha * value - dshotTelemetryState.motorState[motorIndex].ewmAverage);
+        const float sample = (float)value;
+        float *currentAverage = &dshotTelemetryState.motorState[motorIndex].ewmAverage;
+        *currentAverage = *currentAverage + spinupExpAlpha * (sample - *currentAverage);
     }
 
     // Update max temp
@@ -334,9 +336,9 @@ uint32_t getDshotAverageRpm(void)
     return erpmToRpm(dshotTelemetryState.averageErpm);
 }
 
-uint32_t getDshotMotorAverageRpm(uint8_t index)
+uint16_t getDshotMotorAverageRpm(uint8_t index)
 {
-    return erpmToRpm(dshotTelemetryState.motorState[index].ewmAverage);
+    return (uint16_t)(dshotTelemetryState.motorState[index].ewmAverage);
 }
 
 #endif // USE_DSHOT_TELEMETRY
