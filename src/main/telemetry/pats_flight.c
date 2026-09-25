@@ -268,7 +268,7 @@ patsFlightPayload_t encodePatsFlightPayload(const patsFlightTelemetryState_t *st
     }
 
     payload.bytes[0] = (uint8_t)(erpmMotor0 >> 8); 
-    payload.bytes[1] = (uint8_t)((erpmMotor0 & 0x00E0) | ((count_spun_up & 0x03) == 0x03 ? 0x10 : 0x00) | ((erpmMotor1 & 0xF000) >> 12));
+    payload.bytes[1] = (uint8_t)((erpmMotor0 & 0x00E0) | ((count_spun_up & 0x04) == 0x04 ? 0x10 : 0x00) | ((erpmMotor1 & 0xF000) >> 12));
     payload.bytes[2] = (uint8_t)(((erpmMotor1 & 0x0FE0) >> 4) | (allMotorsSpunUp ? 0x01 : 0x00)); 
     payload.bytes[3] = (uint8_t)(erpmMotor2 >> 8); 
     payload.bytes[4] = (uint8_t)((erpmMotor2 & 0x00E0) | ((count_spun_up & 0x02) == 0x02 ? 0x10 : 0x00) | ((erpmMotor3 & 0xF000) >> 12));
