@@ -349,9 +349,7 @@ void crsfFramePATS(sbuf_t *dst)
 
 void crsfFramePatsFlight(sbuf_t *dst)
 {
-    patsFlightTelemetryState_t state;
-    patsFlightTelemetryStateFromFc(&state);
-    const patsFlightPayload_t payload = encodePatsFlightPayload(&state);
+    const patsFlightPayload_t payload = encodePatsFlightPayload();
 
     sbufWriteU8(dst, CRSF_FRAME_PATS_FLIGHT_PAYLOAD_SIZE + CRSF_FRAME_LENGTH_TYPE_CRC);
     sbufWriteU8(dst, CRSF_FRAMETYPE_PATS_FLIGHT);
