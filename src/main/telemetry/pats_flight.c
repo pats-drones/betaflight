@@ -50,10 +50,11 @@ static uint8_t quantizeMotorCommand(float motor_val, int nbits) {
 patsFlightPayload_t encodePatsFlightPayload(void)
 {
     patsFlightPayload_t payload = { 0 };
-    const bool motor0SpunUp = getDshotMotorAverageRpm(0) > PATS_FLIGHT_MOTOR_SPINUP_eRPM;
-    const bool motor1SpunUp = getDshotMotorAverageRpm(1) > PATS_FLIGHT_MOTOR_SPINUP_eRPM;
-    const bool motor2SpunUp = getDshotMotorAverageRpm(2) > PATS_FLIGHT_MOTOR_SPINUP_eRPM;
-    const bool motor3SpunUp = getDshotMotorAverageRpm(3) > PATS_FLIGHT_MOTOR_SPINUP_eRPM;
+    const uint16_t motorSpinupErpm = motorConfig()->patsFlightMotorSpinupErpm;
+    const bool motor0SpunUp = getDshotMotorAverageRpm(0) > motorSpinupErpm;
+    const bool motor1SpunUp = getDshotMotorAverageRpm(1) > motorSpinupErpm;
+    const bool motor2SpunUp = getDshotMotorAverageRpm(2) > motorSpinupErpm;
+    const bool motor3SpunUp = getDshotMotorAverageRpm(3) > motorSpinupErpm;
 
     float min_motor;
     float max_motor;
@@ -118,17 +119,17 @@ patsFlightPayload_t encodePatsFlightPayload(void)
     payload.maxDshotCommand = quantizeMotorCommand(max_motor, 4);
     payload.avgDshotCommand = quantizeMotorCommand(avg_motor, 4);
 
-    uint16_t erpmMotor0 = getDshotMotorAverageRpm(0);
-    uint16_t erpmMotor1 = getDshotMotorAverageRpm(1);
-    uint16_t erpmMotor2 = getDshotMotorAverageRpm(2);
-    uint16_t erpmMotor3 = getDshotMotorAverageRpm(3);
+    // uint16_t erpmMotor0 = getDshotMotorAverageRpm(0);
+    // uint16_t erpmMotor1 = getDshotMotorAverageRpm(1);
+    // uint16_t erpmMotor2 = getDshotMotorAverageRpm(2);
+    // uint16_t erpmMotor3 = getDshotMotorAverageRpm(3);
 
-    payload.bytes[0] = (uint8_t)(erpmMotor0 >> 8); 
-    payload.bytes[1] = (uint8_t)((erpmMotor0 & 0x00E0) | (motor0SpunUp ? 0x10 : 0x00) | ((erpmMotor1 & 0xF000) >> 12));
-    payload.bytes[2] = (uint8_t)(((erpmMotor1 & 0x0FE0) >> 4) | (motor1SpunUp ? 0x01 : 0x00)); 
-    payload.bytes[3] = (uint8_t)(erpmMotor2 >> 8); 
-    payload.bytes[4] = (uint8_t)((erpmMotor2 & 0x00E0) | (motor2SpunUp ? 0x10 : 0x00) | ((erpmMotor3 & 0xF000) >> 12));
-    payload.bytes[5] = (uint8_t)(((erpmMotor3 & 0x0FE0) >> 4) | (motor3SpunUp ? 0x01 : 0x00)); 
+    // payload.bytes[0] = (uint8_t)(erpmMotor0 >> 8); 
+    // payload.bytes[1] = (uint8_t)((erpmMotor0 & 0x00E0) | (motor0SpunUp ? 0x10 : 0x00) | ((erpmMotor1 & 0xF000) >> 12));
+    // payload.bytes[2] = (uint8_t)(((erpmMotor1 & 0x0FE0) >> 4) | (motor1SpunUp ? 0x01 : 0x00)); 
+    // payload.bytes[3] = (uint8_t)(erpmMotor2 >> 8); 
+    // payload.bytes[4] = (uint8_t)((erpmMotor2 & 0x00E0) | (motor2SpunUp ? 0x10 : 0x00) | ((erpmMotor3 & 0xF000) >> 12));
+    // payload.bytes[5] = (uint8_t)(((erpmMotor3 & 0x0FE0) >> 4) | (motor3SpunUp ? 0x01 : 0x00)); 
 
     return payload;
 }

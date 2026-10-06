@@ -44,10 +44,10 @@
 
 #include "flight/mixer.h"
 
+#include "sensors/gyro.h"
+
 #include "rx/rx.h"
 #include "dshot.h"
-
-static const float spinupExpAlpha = 0.0246900879716674f;
 
 void dshotInitEndpoints(const motorConfig_t *motorConfig, float outputLimit, float *outputLow, float *outputHigh, float *disarm, float *deadbandMotor3dHigh, float *deadbandMotor3dLow)
 {
@@ -136,6 +136,23 @@ FAST_CODE uint16_t prepareDshotPacket(dshotProtocolControl_t *pcb)
 
 
 FAST_DATA_ZERO_INIT dshotTelemetryState_t dshotTelemetryState;
+
+static float dshotGetTelemetryEwmaAlpha(void)
+{
+    static uint32_t cachedLooptimeUs;
+    static uint16_t cachedWindowMs;
+    static float alpha;
+
+    const uint16_t windowMs = motorConfig()->dshotTelemetryEwmaWindowMs;
+    if (gyro.targetLooptime != cachedLooptimeUs || windowMs != cachedWindowMs) {
+        const float windowUs = windowMs * 1000.0f;
+        alpha = 1.0f - expf(-gyro.targetLooptime / windowUs);
+        cachedLooptimeUs = gyro.targetLooptime;
+        cachedWindowMs = windowMs;
+    }
+
+    return alpha;
+}
 
 static uint32_t dshot_decode_eRPM_telemetry_value(uint16_t value)
 {
@@ -255,6 +272,7 @@ static void dshotUpdateTelemetryData(uint8_t motorIndex, dshotTelemetryType_t ty
     if (type == DSHOT_TELEMETRY_TYPE_eRPM) {
         const float sample = (float)value;
         float *currentAverage = &dshotTelemetryState.motorState[motorIndex].ewmAverage;
+        const float spinupExpAlpha = dshotGetTelemetryEwmaAlpha();
         *currentAverage = *currentAverage + spinupExpAlpha * (sample - *currentAverage);
     }
 

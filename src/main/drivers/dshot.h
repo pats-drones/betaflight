@@ -35,8 +35,6 @@
 #define MIN_GCR_EDGES                   (7)
 #define MAX_GCR_EDGES                   (22)
 
-#define PATS_FLIGHT_MOTOR_SPINUP_eRPM   (360)
-
 // comment out to see frame dump of corrupted frames in dshot_telemetry_info
 //#define DEBUG_BBDECODE
 
