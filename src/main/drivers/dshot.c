@@ -143,7 +143,7 @@ static float dshotGetTelemetryEwmaAlpha(void)
     static uint16_t cachedWindowMs;
     static float alpha;
 
-    const uint16_t windowMs = motorConfig()->dshotTelemetryEwmaWindowMs;
+    const uint16_t windowMs = motorConfig()->patsDshotTelemetryEwmaWindowMs;
     if (gyro.targetLooptime != cachedLooptimeUs || windowMs != cachedWindowMs) {
         const float windowUs = windowMs * 1000.0f;
         alpha = 1.0f - expf(-gyro.targetLooptime / windowUs);

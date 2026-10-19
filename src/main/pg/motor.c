@@ -61,7 +61,7 @@ void pgResetFn_motorConfig(motorConfig_t *motorConfig)
     motorConfig->maxthrottle = 2000;
     motorConfig->mincommand = 1000;
     motorConfig->digitalIdleOffsetValue = 550;
-    motorConfig->dshotTelemetryEwmaWindowMs = 40;
+    motorConfig->patsDshotTelemetryEwmaWindowMs = 40;
     motorConfig->patsFlightMotorSpinupErpm = 360;
 
 #ifdef USE_DSHOT_DMAR
