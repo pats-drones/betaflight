@@ -20,44 +20,25 @@
 #define PATS_FLIGHT_PAYLOAD_SIZE ((size_t)CRSF_FRAME_PATS_FLIGHT_PAYLOAD_SIZE)
 #define PATS_FLIGHT_CRSF_FRAME_SIZE (PATS_FLIGHT_PAYLOAD_SIZE + (size_t)CRSF_FRAME_LENGTH_NON_PAYLOAD)
 
-// PATS flight payload: quaternion (26), acceleration (17), armed (1), primary arming failure (3), all motors spun up (1).
-typedef enum {
-    PATS_ARMING_FAILURE_NONE = 0,
-    PATS_ARMING_FAILURE_NO_GYRO = 1,
-    PATS_ARMING_FAILURE_FAILSAFE = 2,
-    PATS_ARMING_FAILURE_RX = 3,
-    PATS_ARMING_FAILURE_THROTTLE = 4,
-    PATS_ARMING_FAILURE_ANGLE = 5,
-    PATS_ARMING_FAILURE_CONFIG = 6,
-    PATS_ARMING_FAILURE_SYSTEM = 7,
-} patsArmingFailureReason_e;
-
+// PATS flight payload: quaternion (32), all motors spin states up (4), dshot min/max/avg commands (12).
 typedef union {
     struct {
-        uint8_t quaternionComponent0 : 8;
-        uint8_t quaternionComponent1 : 8;
-        uint8_t quaternionComponent2 : 8;
-        uint8_t accelerationX : 6,
-                largestQuatIndex : 2;
-        uint8_t accelerationY : 6,
-                allMotorsSpunUp : 1,
-                armed : 1;
-        uint8_t accelerationZ : 5,
-                armingFailureReason : 3;
+        uint32_t quaternionComponent0 : 10,
+                 quaternionComponent1 : 10,
+                 quaternionComponent2 : 10,
+                 largestQuatIndex : 2;
+        uint8_t motor0spunUp : 1,
+                motor1spunUp : 1,
+                motor2spunUp : 1,
+                motor3spunUp : 1,
+                minDshotCommand : 4;
+        uint8_t maxDshotCommand : 4,
+                avgDshotCommand : 4;
     } __attribute__ ((__packed__));
     uint8_t bytes[PATS_FLIGHT_PAYLOAD_SIZE];
 } __attribute__ ((__packed__)) patsFlightPayload_t;
 
-uint8_t patsArmingFailureReasonFromFlags(armingDisableFlags_e flags);
-uint8_t patsFlightEncodeAcceleration6(float accelerationG, bool valid);
-uint8_t patsFlightEncodeAcceleration5(float accelerationG, bool valid);
 
 patsFlightPayload_t encodePatsFlightPayload(void);
-
-#ifdef __cplusplus
-static_assert(PATS_FLIGHT_PAYLOAD_SIZE == 6, "PATS flight payload must stay 6 bytes");
-static_assert(PATS_FLIGHT_CRSF_FRAME_SIZE == 10, "PATS flight CRSF frame must stay 10 bytes");
-#else
-_Static_assert(PATS_FLIGHT_PAYLOAD_SIZE == 6, "PATS flight payload must stay 6 bytes");
-_Static_assert(PATS_FLIGHT_CRSF_FRAME_SIZE == 10, "PATS flight CRSF frame must stay 10 bytes");
-#endif
+uint16_t encodeQuatComponent(float component, int nbits);
+uint8_t quantizeMotorCommand(float motor_val, int nbits);
