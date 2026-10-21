@@ -61,7 +61,7 @@
 
 static failsafeState_t failsafeState;
 
-#define MAX_RUNTIME_WITHOUT_RXDATA_MS 1800000 // 30 minutes
+#define MAX_RUNTIME_WITHOUT_RXDATA_MS 180000 // 3 minutes
 bool hasHadRX = false;
 
 PG_REGISTER_WITH_RESET_TEMPLATE(failsafeConfig_t, failsafeConfig, PG_FAILSAFE_CONFIG, 2);
@@ -278,7 +278,7 @@ FAST_CODE_NOINLINE void failsafeUpdateState(void)
     if (failsafeState.rebootPending) {
         if (receivingRxData) {
             failsafeState.rebootPending = false;
-        } else if (!armed && ARMING_FLAG(WAS_EVER_ARMED) && (failsafeConfig()->pats_rcloss_reboot_delay > 0)) {
+        } else if (!armed && hasHadRX && (failsafeConfig()->pats_rcloss_reboot_delay > 0)) {
             if (cmp32(millis(), failsafeState.rebootDeadline) >= 0) {
                 failsafeState.rebootPending = false;
                 systemReset();
