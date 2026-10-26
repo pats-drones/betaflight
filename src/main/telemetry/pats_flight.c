@@ -48,10 +48,11 @@ uint8_t quantizeMotorCommand(float motor_val, int nbits) {
 patsFlightPayload_t encodePatsFlightPayload(void)
 {
     patsFlightPayload_t payload = { 0 };
-    payload.motor0spunUp = getDshotMotorAverageRpm(0) > PATS_FLIGHT_MOTOR_SPINUP_eRPM;
-    payload.motor1spunUp = getDshotMotorAverageRpm(1) > PATS_FLIGHT_MOTOR_SPINUP_eRPM;
-    payload.motor2spunUp = getDshotMotorAverageRpm(2) > PATS_FLIGHT_MOTOR_SPINUP_eRPM;
-    payload.motor3spunUp = getDshotMotorAverageRpm(3) > PATS_FLIGHT_MOTOR_SPINUP_eRPM;
+    const uint16_t motorThresh = motorConfig()->pats_eRPM_thresh;
+    payload.motor0spunUp = getDshotMotorAverageRpm(0) > motorThresh;
+    payload.motor1spunUp = getDshotMotorAverageRpm(1) > motorThresh;
+    payload.motor2spunUp = getDshotMotorAverageRpm(2) > motorThresh;
+    payload.motor3spunUp = getDshotMotorAverageRpm(3) > motorThresh;
 
     float min_motor = motor[0];
     float max_motor = motor[0];
